@@ -5,6 +5,7 @@ mod function;
 mod object;
 mod pool;
 mod program;
+mod serde;
 mod stack;
 
 use bytecode::{Bytecode, Instr};
@@ -25,7 +26,7 @@ fn main() {
         Instr::Goto(4),
         Instr::IIncr(0, 1),
         Instr::ILoad(0),
-        Instr::Bipush(100000),
+        Instr::Bipush(1000000),
         Instr::IfICmpLT(3),
         Instr::Return,
     ];

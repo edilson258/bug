@@ -47,8 +47,8 @@ impl Runtime {
             match instr {
                 Instr::IAdd => self.iadd(&mut frame),
                 Instr::ILdc(index) => self.ildc(index, &mut frame),
-                Instr::ILoad(index) => self.iload(index, &mut frame),
-                Instr::IStore(index) => self.istore(index, &mut frame),
+                Instr::ILoad(index) => frame.opstack.push(frame.locals.get_by_index(index)),
+                Instr::IStore(index) => frame.locals.store_at(index, frame.opstack.pop()),
                 Instr::Invoke(name) => {
                     let callee = self.program.find_fn(&name);
                     let mut callee_frame =
@@ -95,7 +95,7 @@ impl Runtime {
                     }
                 }
                 Instr::IIncr(index, constant) => self.iincr(&mut frame, index, constant),
-                Instr::Bipush(iconst) => frame.stack_push(Object::Int(iconst)),
+                Instr::Bipush(iconst) => frame.opstack.push(Object::Int(iconst)),
             }
         }
     }
@@ -135,15 +135,5 @@ impl Runtime {
     fn ildc(&mut self, index: usize, frame: &mut Frame) {
         let x = self.program.pool.get_by_index(index);
         frame.stack_push(x);
-    }
-
-    fn iload(&mut self, index: usize, frame: &mut Frame) {
-        let x = frame.locals_get_by_index(index);
-        frame.stack_push(x);
-    }
-
-    fn istore(&mut self, _index: usize, frame: &mut Frame) {
-        let x = frame.stack_pop();
-        frame.locals_append(x);
     }
 }

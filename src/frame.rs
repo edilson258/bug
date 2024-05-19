@@ -58,6 +58,12 @@ impl Locals {
         }
         &mut self.inner[index]
     }
+
+    /// Note: this function does check bounds
+    ///
+    pub fn store_at(&mut self, index: usize, o: Object) {
+        self.inner[index] = o;
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -65,7 +71,7 @@ pub struct Frame {
     pub pc: usize,
     code: Bytecode,
     pub locals: Locals,
-    opstack: OpStack,
+    pub opstack: OpStack,
 }
 
 impl Frame {
@@ -84,10 +90,6 @@ impl Frame {
         instr
     }
 
-    pub fn fetch_by_index(&mut self, index: usize) -> Instr {
-        self.code.fetch_by_index(index)
-    }
-
     pub fn stack_push(&mut self, o: Object) {
         self.opstack.push(o);
     }
@@ -98,10 +100,6 @@ impl Frame {
 
     pub fn locals_append(&mut self, o: Object) {
         self.locals.append(o);
-    }
-
-    pub fn locals_get_by_index(&self, index: usize) -> Object {
-        self.locals.get_by_index(index)
     }
 }
 
