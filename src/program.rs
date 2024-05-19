@@ -14,11 +14,11 @@ impl Program {
     }
 
     pub fn find_fn(&self, name: &str) -> Function {
-        let rtn = self.fns.iter().find(|f| f.name.as_str() == name);
-        if rtn.is_none() {
+        let func = self.fns.iter().find(|f| f.name.as_str() == name);
+        if func.is_none() {
             eprintln!("[Error]: No function named {}", name);
             exit(1);
         }
-        rtn.unwrap().clone()
+        func.unwrap().clone()
     }
 }

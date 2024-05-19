@@ -2,7 +2,7 @@ use std::process::exit;
 
 use crate::bytecode::{Bytecode, Instr};
 use crate::object::{Object, DEFAULT_OBJECT};
-use crate::stack::OpStack;
+use crate::stack::{OpStack, MAX_STACK};
 
 /// The max number of local variables a function can hold
 ///
@@ -51,7 +51,7 @@ impl Locals {
 
 #[derive(Debug, Clone)]
 pub struct Frame {
-    pub pc: usize,
+    pc: usize,
     code: Bytecode,
     locals: Locals,
     opstack: OpStack,
@@ -89,3 +89,18 @@ impl Frame {
         self.locals.get_by_index(index)
     }
 }
+
+pub const DEFAULT_FRAME: Frame = Frame {
+    pc: 0,
+    code: Bytecode { instrs: vec![] },
+    locals: Locals {
+        count: 0,
+        max_locals: 0,
+        inner: [DEFAULT_OBJECT; MAX_LOCALS],
+    },
+    opstack: OpStack {
+        sp: 0,
+        max_stack: 0,
+        inner: [DEFAULT_OBJECT; MAX_STACK],
+    },
+};

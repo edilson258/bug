@@ -1,11 +1,9 @@
 use std::process::exit;
 
-use crate::{
-    frame::Frame,
-    object::{Object, DEFAULT_OBJECT},
-};
+use crate::frame::{Frame, DEFAULT_FRAME};
+use crate::object::{Object, DEFAULT_OBJECT};
 
-const MAX_STACK: usize = 25;
+pub const MAX_STACK: usize = 25;
 
 #[derive(Debug, Clone)]
 pub struct OpStack {
@@ -48,8 +46,9 @@ impl OpStack {
 
 #[derive(Debug)]
 pub struct FrameStack {
+    sp: usize,
     max_stack: usize,
-    inner: Vec<Frame>,
+    inner: [Frame; MAX_STACK],
 }
 
 impl FrameStack {
@@ -59,28 +58,27 @@ impl FrameStack {
             exit(1);
         }
         Self {
+            sp: 0,
             max_stack: cap,
-            inner: vec![],
+            inner: [DEFAULT_FRAME; MAX_STACK],
         }
     }
 
-    pub fn push(&mut self, item: Frame) {
-        if self.inner.len() >= self.max_stack {
+    pub fn push(&mut self, frame: Frame) {
+        if self.sp >= self.max_stack {
             eprintln!("[Error]: Couldn't push onto stack: StackOverFlow");
             exit(1);
         }
-        self.inner.push(item);
+        self.inner[self.sp] = frame;
+        self.sp += 1;
     }
 
     pub fn pop(&mut self) -> Frame {
-        if self.inner.is_empty() {
+        if self.sp <= 0 {
             eprintln!("[Error]: Couldn't pop from stack: StackUnderFlow");
             exit(1);
         }
-        self.inner.pop().unwrap()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.inner.is_empty()
+        self.sp -= 1;
+        self.inner[self.sp].clone()
     }
 }

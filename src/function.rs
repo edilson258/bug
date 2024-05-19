@@ -1,4 +1,4 @@
-use crate::bytecode::{Bytecode, Instr};
+use crate::bytecode::Bytecode;
 
 #[derive(Debug, Clone)]
 pub struct Function {
@@ -23,16 +23,6 @@ impl Function {
             code,
             max_stack,
             max_locals,
-        }
-    }
-
-    pub fn append_instr(&mut self, instr: Instr) {
-        self.code.append(instr);
-    }
-
-    pub fn append_many(&mut self, instrs: Vec<Instr>) {
-        for instr in instrs {
-            self.append_instr(instr);
         }
     }
 }

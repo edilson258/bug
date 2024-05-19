@@ -1,4 +1,8 @@
-use crate::{bytecode::Instr, frame::Frame, object::Object, program::Program, stack::FrameStack};
+use crate::bytecode::Instr;
+use crate::frame::Frame;
+use crate::object::Object;
+use crate::program::Program;
+use crate::stack::FrameStack;
 
 pub struct Runtime {
     program: Program,
@@ -31,12 +35,13 @@ impl Runtime {
     /// the execution starts from main function
     ///
     pub fn run(&mut self) {
-        if self.stack.is_empty() {
-            return;
-        }
+        // main frame
         let mut frame = self.stack.pop();
 
         // Main Loop
+        // Note: All instruction that peform control flow such:
+        // invoke, ireturn, return, ... must be handled inside of the main loop
+        //
         loop {
             let instr = frame.fetch_next_instr();
             println!("{:?}", instr);
@@ -64,11 +69,9 @@ impl Runtime {
                     outher.stack_push(x);
                     frame = outher
                 }
-                Instr::Retrun => break,
+                Instr::Return => break,
             }
         }
-
-        println!("{:#?}", frame);
     }
 
     fn iadd(&mut self, frame: &mut Frame) {

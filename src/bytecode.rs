@@ -7,7 +7,7 @@ pub enum Instr {
     IAdd,
 
     // control flow
-    Retrun,
+    Return,
     IReturn,
     Invoke(String),
 
@@ -32,10 +32,6 @@ impl Bytecode {
         self.instrs[index].clone()
     }
 
-    pub fn append(&mut self, instr: Instr) {
-        self.instrs.push(instr);
-    }
-
     fn check_bound(&self, index: usize) {
         if index >= self.instrs.len() {
             eprintln!(
@@ -51,7 +47,7 @@ impl fmt::Display for Instr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::IAdd => write!(f, "[iadd]"),
-            Self::Retrun => write!(f, "[return]"),
+            Self::Return => write!(f, "[return]"),
             Self::IReturn => write!(f, "[ireturn]"),
             Self::Invoke(name) => write!(f, "[invoke] {}", name),
             Self::ILdc(index) => write!(f, "[ildc] {}", index),

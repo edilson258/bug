@@ -30,7 +30,7 @@ fn main() {
                 Instr::ILdc(y),
                 Instr::Invoke("sum".to_string()),
                 Instr::IStore(0),
-                Instr::Retrun,
+                Instr::Return,
             ]),
         ),
         Function::make(
