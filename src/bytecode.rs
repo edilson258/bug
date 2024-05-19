@@ -1,20 +1,29 @@
 use core::fmt;
-use std::process::exit;
+use std::{process::exit, usize};
 
 #[derive(Debug, Clone)]
 pub enum Instr {
     // arithmetic
     IAdd,
+    IIncr(usize, i32),
 
     // control flow
     Return,
     IReturn,
     Invoke(String),
 
+    // jumps
+    Goto(usize),
+    IfICmpLT(usize),
+    IfICmpGT(usize),
+    IfICmpE(usize),
+    IfICmpNE(usize),
+
     // data handlers
     ILdc(usize),
     ILoad(usize),
     IStore(usize),
+    Bipush(i32),
 }
 
 #[derive(Debug, Clone)]
@@ -53,6 +62,13 @@ impl fmt::Display for Instr {
             Self::ILdc(index) => write!(f, "[ildc] {}", index),
             Self::ILoad(index) => write!(f, "[iload] {}", index),
             Self::IStore(index) => write!(f, "[istore] {}", index),
+            Self::Goto(index) => write!(f, "[jump] {}", index),
+            Self::IfICmpLT(index) => write!(f, "[IfICmpLT] {}", index),
+            Self::IfICmpGT(index) => write!(f, "[IfICmpGT] {}", index),
+            Self::IfICmpE(index) => write!(f, "[IfICmpE] {}", index),
+            Self::IfICmpNE(index) => write!(f, "[IfICmpNE] {}", index),
+            Self::IIncr(index, iconst) => write!(f, "[incr] {} by {}", index, iconst),
+            Self::Bipush(iconst) => write!(f, "[bipush] {}", iconst),
         }
     }
 }

@@ -40,11 +40,10 @@ impl Runtime {
 
         // Main Loop
         // Note: All instruction that peform control flow such:
-        // invoke, ireturn, return, ... must be handled inside of the main loop
+        // invoke, ireturn, return, jumps, ... must be handled inside of the main loop
         //
         loop {
             let instr = frame.fetch_next_instr();
-            println!("{:?}", instr);
             match instr {
                 Instr::IAdd => self.iadd(&mut frame),
                 Instr::ILdc(index) => self.ildc(index, &mut frame),
@@ -69,9 +68,56 @@ impl Runtime {
                     outher.stack_push(x);
                     frame = outher
                 }
+                Instr::Goto(offset) => frame.pc = offset,
                 Instr::Return => break,
+                Instr::IfICmpE(offset) => {
+                    let (fst, snd) = self.ipop_two(&mut frame);
+                    if fst == snd {
+                        frame.pc = offset
+                    }
+                }
+                Instr::IfICmpNE(offset) => {
+                    let (fst, snd) = self.ipop_two(&mut frame);
+                    if fst != snd {
+                        frame.pc = offset
+                    }
+                }
+                Instr::IfICmpLT(offset) => {
+                    let (fst, snd) = self.ipop_two(&mut frame);
+                    if fst < snd {
+                        frame.pc = offset;
+                    }
+                }
+                Instr::IfICmpGT(offset) => {
+                    let (fst, snd) = self.ipop_two(&mut frame);
+                    if fst > snd {
+                        frame.pc = offset;
+                    }
+                }
+                Instr::IIncr(index, constant) => self.iincr(&mut frame, index, constant),
+                Instr::Bipush(iconst) => frame.stack_push(Object::Int(iconst)),
             }
         }
+    }
+
+    fn ipop_two(&mut self, frame: &mut Frame) -> (i32, i32) {
+        let snd = match frame.stack_pop() {
+            Object::Int(x) => x,
+            _ => panic!("[ifcmpe] expects int on stack"),
+        };
+        let fst = match frame.stack_pop() {
+            Object::Int(y) => y,
+            _ => panic!("[ifcmpe] expects int on stack"),
+        };
+
+        (fst, snd)
+    }
+
+    fn iincr(&mut self, frame: &mut Frame, index: usize, constant: i32) {
+        match frame.locals.get_as_ref(index) {
+            Object::Int(x) => *x += constant,
+            _ => panic!("[iincr] expects an int"),
+        };
     }
 
     fn iadd(&mut self, frame: &mut Frame) {

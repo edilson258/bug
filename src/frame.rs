@@ -47,13 +47,24 @@ impl Locals {
         }
         self.inner[index].clone()
     }
+
+    pub fn get_as_ref(&mut self, index: usize) -> &mut Object {
+        if index >= self.inner.len() {
+            eprintln!(
+                "[Error]: Couldn't access to locals by index {}: OutOfRange",
+                index
+            );
+            exit(1);
+        }
+        &mut self.inner[index]
+    }
 }
 
 #[derive(Debug, Clone)]
 pub struct Frame {
-    pc: usize,
+    pub pc: usize,
     code: Bytecode,
-    locals: Locals,
+    pub locals: Locals,
     opstack: OpStack,
 }
 
@@ -71,6 +82,10 @@ impl Frame {
         let instr = self.code.fetch_by_index(self.pc);
         self.pc += 1;
         instr
+    }
+
+    pub fn fetch_by_index(&mut self, index: usize) -> Instr {
+        self.code.fetch_by_index(index)
     }
 
     pub fn stack_push(&mut self, o: Object) {

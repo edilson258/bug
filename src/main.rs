@@ -16,8 +16,19 @@ use program::Program;
 
 fn main() {
     let mut pool = Pool::make();
-    let x = pool.append(Object::Int(34));
-    let y = pool.append(Object::Int(35));
+    let _x = pool.append(Object::Int(34));
+    let _y = pool.append(Object::Int(35));
+
+    let instrs = vec![
+        Instr::Bipush(0),
+        Instr::IStore(0),
+        Instr::Goto(4),
+        Instr::IIncr(0, 1),
+        Instr::ILoad(0),
+        Instr::Bipush(100000),
+        Instr::IfICmpLT(3),
+        Instr::Return,
+    ];
 
     let fns: Vec<Function> = vec![
         Function::make(
@@ -25,13 +36,7 @@ fn main() {
             0, // arity
             2, // max_stack
             1, // max_locals
-            Bytecode::make(vec![
-                Instr::ILdc(x),
-                Instr::ILdc(y),
-                Instr::Invoke("sum".to_string()),
-                Instr::IStore(0),
-                Instr::Return,
-            ]),
+            Bytecode::make(instrs),
         ),
         Function::make(
             "sum".to_string(),
