@@ -1,16 +1,15 @@
 use std::process::exit;
 
 use crate::bytecode::{Bytecode, Instr};
-use crate::object::{Object, DEFAULT_OBJECT};
-use crate::stack::{OpStack, MAX_STACK};
+use crate::object::Object;
+use crate::stack::Stack;
 
 /// The max number of local variables a function can hold
 ///
-const MAX_LOCALS: usize = 25;
+const MAX_LOCALS: usize = 5;
 
 #[derive(Debug, Clone)]
 pub struct Locals {
-    count: usize,
     max_locals: usize,
     inner: [Object; MAX_LOCALS],
 }
@@ -22,19 +21,9 @@ impl Locals {
             exit(1);
         }
         Self {
-            count: 0,
             max_locals: cap,
-            inner: [DEFAULT_OBJECT; MAX_LOCALS],
+            inner: Default::default(),
         }
-    }
-
-    pub fn append(&mut self, local: Object) {
-        if self.max_locals >= self.inner.len() {
-            eprintln!("[Error]: Couldn't append to locals: NoEnoughSpace");
-            exit(1);
-        }
-        self.inner[self.count] = local;
-        self.count += 1;
     }
 
     pub fn get_by_index(&self, index: usize) -> Object {
@@ -59,9 +48,14 @@ impl Locals {
         &mut self.inner[index]
     }
 
-    /// Note: this function does check bounds
-    ///
     pub fn store_at(&mut self, index: usize, o: Object) {
+        if index >= self.max_locals {
+            eprintln!(
+                "[Error]: Couldn't store to locals at index {}: OutOfRange",
+                index
+            );
+            exit(1);
+        }
         self.inner[index] = o;
     }
 }
@@ -71,7 +65,7 @@ pub struct Frame {
     pub pc: usize,
     code: Bytecode,
     pub locals: Locals,
-    pub opstack: OpStack,
+    pub opstack: Stack<Object>,
 }
 
 impl Frame {
@@ -79,7 +73,7 @@ impl Frame {
         Self {
             pc: 0,
             code,
-            opstack: OpStack::make(max_stack),
+            opstack: Stack::make(max_stack),
             locals: Locals::make(max_locals),
         }
     }
@@ -97,23 +91,15 @@ impl Frame {
     pub fn stack_pop(&mut self) -> Object {
         self.opstack.pop()
     }
-
-    pub fn locals_append(&mut self, o: Object) {
-        self.locals.append(o);
-    }
 }
 
-pub const DEFAULT_FRAME: Frame = Frame {
-    pc: 0,
-    code: Bytecode { instrs: vec![] },
-    locals: Locals {
-        count: 0,
-        max_locals: 0,
-        inner: [DEFAULT_OBJECT; MAX_LOCALS],
-    },
-    opstack: OpStack {
-        sp: 0,
-        max_stack: 0,
-        inner: [DEFAULT_OBJECT; MAX_STACK],
-    },
-};
+impl Default for Frame {
+    fn default() -> Self {
+        Frame {
+            pc: 0,
+            code: Bytecode::make(vec![]),
+            locals: Locals::make(0),
+            opstack: Stack::make(0),
+        }
+    }
+}

@@ -5,7 +5,6 @@ mod function;
 mod object;
 mod pool;
 mod program;
-mod serde;
 mod stack;
 
 use bytecode::{Bytecode, Instr};
@@ -17,19 +16,30 @@ use program::Program;
 
 fn main() {
     let mut pool = Pool::make();
-    let _x = pool.append(Object::Int(34));
-    let _y = pool.append(Object::Int(35));
+    let x = pool.append(Object::Int(34));
+    let y = pool.append(Object::Int(35));
 
-    let instrs = vec![
-        Instr::Bipush(0),
+    let main_fn_instrs = vec![
+        Instr::ILdc(x),
+        Instr::ILdc(y),
+        Instr::Invoke("f1".to_string()),
         Instr::IStore(0),
-        Instr::Goto(4),
-        Instr::IIncr(0, 1),
-        Instr::ILoad(0),
-        Instr::Bipush(1000000),
-        Instr::IfICmpLT(3),
         Instr::Return,
     ];
+
+    let f1_fn_instrs = vec![
+        Instr::ILoad(0),
+        Instr::ILoad(1),
+        Instr::IAdd,
+        Instr::Bipush(69),
+        Instr::IfICmpE(6),
+        Instr::Return,
+        Instr::Invoke("f2".to_string()),
+        Instr::IReturn,
+        Instr::Goto(5),
+    ];
+
+    let f2_fn_instrs = vec![Instr::Bipush(1024), Instr::IReturn];
 
     let fns: Vec<Function> = vec![
         Function::make(
@@ -37,19 +47,21 @@ fn main() {
             0, // arity
             2, // max_stack
             1, // max_locals
-            Bytecode::make(instrs),
+            Bytecode::make(main_fn_instrs),
         ),
         Function::make(
-            "sum".to_string(),
+            "f1".to_string(),
             2, // arity
             2, // max_stack
             2, // max_locals
-            Bytecode::make(vec![
-                Instr::ILoad(0),
-                Instr::ILoad(1),
-                Instr::IAdd,
-                Instr::IReturn,
-            ]),
+            Bytecode::make(f1_fn_instrs),
+        ),
+        Function::make(
+            "f2".to_string(),
+            0, // arity
+            1, // max_stack
+            0, // max_locals
+            Bytecode::make(f2_fn_instrs),
         ),
     ];
 

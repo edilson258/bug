@@ -2,11 +2,11 @@ use crate::bytecode::Instr;
 use crate::frame::Frame;
 use crate::object::Object;
 use crate::program::Program;
-use crate::stack::FrameStack;
+use crate::stack::Stack;
 
 pub struct Runtime {
     program: Program,
-    stack: FrameStack,
+    stack: Stack<Frame>,
 }
 
 impl Runtime {
@@ -25,7 +25,7 @@ impl Runtime {
         let main_fn = program.find_fn("main");
         let main_frame = Frame::make(main_fn.code, main_fn.max_locals, main_fn.max_stack);
 
-        let mut stack = FrameStack::make(2);
+        let mut stack = Stack::make(main_fn.max_stack);
         stack.push(main_frame);
 
         Self { program, stack }
@@ -54,9 +54,8 @@ impl Runtime {
                     let mut callee_frame =
                         Frame::make(callee.code, callee.max_locals, callee.max_stack);
 
-                    for _ in 0..callee.arity {
-                        let x = frame.stack_pop();
-                        callee_frame.locals_append(x);
+                    for index in 0..callee.arity {
+                        callee_frame.locals.store_at(index, frame.opstack.pop());
                     }
 
                     self.stack.push(frame.clone());
@@ -69,7 +68,12 @@ impl Runtime {
                     frame = outher
                 }
                 Instr::Goto(offset) => frame.pc = offset,
-                Instr::Return => break,
+                Instr::Return => {
+                    if self.stack.is_empty() {
+                        break;
+                    }
+                    frame = self.stack.pop();
+                }
                 Instr::IfICmpE(offset) => {
                     let (fst, snd) = self.ipop_two(&mut frame);
                     if fst == snd {
@@ -98,6 +102,9 @@ impl Runtime {
                 Instr::Bipush(iconst) => frame.opstack.push(Object::Int(iconst)),
             }
         }
+
+        println!("{:#?}", frame.locals);
+        println!("{:#?}", frame.opstack);
     }
 
     fn ipop_two(&mut self, frame: &mut Frame) -> (i32, i32) {
@@ -121,14 +128,7 @@ impl Runtime {
     }
 
     fn iadd(&mut self, frame: &mut Frame) {
-        let lhs = match frame.stack_pop() {
-            Object::Int(x) => x,
-            _ => panic!("[iadd] expects int on the stack"),
-        };
-        let rhs = match frame.stack_pop() {
-            Object::Int(x) => x,
-            _ => panic!("[iadd] expects int on the stack"),
-        };
+        let (lhs, rhs) = self.ipop_two(frame);
         frame.stack_push(Object::Int(lhs + rhs));
     }
 
