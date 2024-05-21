@@ -46,6 +46,8 @@ impl Runtime {
             let instr = frame.fetch_next_instr();
             match instr {
                 Instr::IAdd => self.iadd(&mut frame),
+                Instr::IMul => self.imul(&mut frame),
+                Instr::IDiv => self.idiv(&mut frame),
                 Instr::ILdc(index) => self.ildc(index, &mut frame),
                 Instr::ILoad(index) => frame.opstack.push(frame.locals.get_by_index(index)),
                 Instr::IStore(index) => frame.locals.store_at(index, frame.opstack.pop()),
@@ -110,11 +112,11 @@ impl Runtime {
     fn ipop_two(&mut self, frame: &mut Frame) -> (i32, i32) {
         let snd = match frame.stack_pop() {
             Object::Int(x) => x,
-            _ => panic!("[ifcmpe] expects int on stack"),
+            _ => panic!("[ipop] expects int on stack"),
         };
         let fst = match frame.stack_pop() {
             Object::Int(y) => y,
-            _ => panic!("[ifcmpe] expects int on stack"),
+            _ => panic!("[ipop] expects int on stack"),
         };
 
         (fst, snd)
@@ -130,6 +132,16 @@ impl Runtime {
     fn iadd(&mut self, frame: &mut Frame) {
         let (lhs, rhs) = self.ipop_two(frame);
         frame.stack_push(Object::Int(lhs + rhs));
+    }
+
+    fn imul(&mut self, frame: &mut Frame) {
+        let (lhs, rhs) = self.ipop_two(frame);
+        frame.stack_push(Object::Int(lhs * rhs));
+    }
+
+    fn idiv(&mut self, frame: &mut Frame) {
+        let (lhs, rhs) = self.ipop_two(frame);
+        frame.stack_push(Object::Int(lhs / rhs));
     }
 
     fn ildc(&mut self, index: usize, frame: &mut Frame) {

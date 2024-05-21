@@ -5,6 +5,8 @@ use std::{process::exit, usize};
 pub enum Instr {
     // arithmetic
     IAdd,
+    IMul,
+    IDiv,
     IIncr(usize, i32),
 
     // control flow
@@ -69,6 +71,8 @@ impl fmt::Display for Instr {
             Self::IfICmpNE(index) => write!(f, "[IfICmpNE] {}", index),
             Self::IIncr(index, iconst) => write!(f, "[incr] {} by {}", index, iconst),
             Self::Bipush(iconst) => write!(f, "[bipush] {}", iconst),
+            Self::IMul => write!(f, "[imul]"),
+            Self::IDiv => write!(f, "[idiv]"),
         }
     }
 }
