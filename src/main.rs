@@ -20,20 +20,20 @@ fn main() {
     /*
      * Function2 setup
      */
-    let f2_name_index = pool.append(PoolEntry::Object(Object::String("fn1".to_string())));
-    let f2_sign_index = pool.append(PoolEntry::Object(Object::String("(II)I".to_string())));
+    let f2_name_index = pool.append(PoolEntry::Utf8("f2".to_string()));
+    let f2_sign_index = pool.append(PoolEntry::Utf8("()I".to_string()));
     let f2_ref = pool.append(PoolEntry::FunctionRef(FunctionRef::make(
         f2_name_index,
         f2_sign_index,
-        2,
+        2, // index into the list of functions
     )));
     let f2_instrs = vec![Opcode::Bipush(1024), Opcode::IReturn];
 
     /*
      * Function1 setup
      */
-    let f1_name_index = pool.append(PoolEntry::Object(Object::String("fn1".to_string())));
-    let f1_sign_index = pool.append(PoolEntry::Object(Object::String("(II)I".to_string())));
+    let f1_name_index = pool.append(PoolEntry::Utf8("f1".to_string()));
+    let f1_sign_index = pool.append(PoolEntry::Utf8("(II)I".to_string()));
     let f1_ref = pool.append(PoolEntry::FunctionRef(FunctionRef::make(
         f1_name_index,
         f1_sign_index,
@@ -54,8 +54,8 @@ fn main() {
     /*
      * Main function setup
      */
-    let main_name_index = pool.append(PoolEntry::Object(Object::String("main".to_string())));
-    let main_sign_index = pool.append(PoolEntry::Object(Object::String("()V".to_string())));
+    let main_name_index = pool.append(PoolEntry::Utf8("main".to_string()));
+    let main_sign_index = pool.append(PoolEntry::Utf8("()V".to_string()));
     let main_ref = pool.append(PoolEntry::FunctionRef(FunctionRef::make(
         main_name_index,
         main_sign_index,

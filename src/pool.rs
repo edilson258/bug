@@ -21,6 +21,7 @@ impl FunctionRef {
 pub enum PoolEntry {
     FunctionRef(FunctionRef),
     Object(Object),
+    Utf8(String),
 }
 
 type PoolEntries = Vec<PoolEntry>;
