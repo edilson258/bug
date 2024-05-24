@@ -2,10 +2,9 @@ use std::usize;
 
 use crate::bytecode::Opcode;
 use crate::frame::Frame;
-use crate::function::Function;
 use crate::object::Object;
 use crate::pool::PoolEntry;
-use crate::program::Program;
+use crate::program::{Function, Program};
 use crate::stack::Stack;
 
 pub struct Runtime {
@@ -26,7 +25,7 @@ impl Runtime {
     /// Will return a ready Runtime instance
     ///
     pub fn setup(program: Program) -> Self {
-        let main_fn = program.fns[0].clone();
+        let main_fn = program.fns[0].clone(); // `main` fn must be in the index 0
         let main_frame = Frame::make(main_fn.code, main_fn.max_locals, main_fn.max_stack);
 
         let mut stack = Stack::make(main_fn.max_stack);
@@ -68,9 +67,9 @@ impl Runtime {
                     frame = callee_frame
                 }
                 Opcode::IReturn => {
-                    let x = frame.stack_pop();
+                    let object_int = frame.stack_pop();
                     let mut outher = self.stack.pop();
-                    outher.stack_push(x);
+                    outher.stack_push(object_int); // @TODO: check if object is int
                     frame = outher
                 }
                 Opcode::Goto(offset) => frame.pc = offset,
@@ -129,7 +128,7 @@ impl Runtime {
     fn iincr(&mut self, frame: &mut Frame, index: usize, constant: i32) {
         match frame.locals.get_as_ref(index) {
             Object::Int(x) => *x += constant,
-            _ => panic!("[iincr] expects an int"),
+            _ => panic!("[iincr] expects int"),
         };
     }
 
@@ -148,24 +147,25 @@ impl Runtime {
         frame.stack_push(Object::Int(lhs / rhs));
     }
 
+    /// Loads an integer object from pool to the operand stack
+    /// panic if the entry in the provided index isn't the expected
+    ///
     fn ildc(&mut self, index: usize, frame: &mut Frame) {
-        let x = self.program.pool.get_by_index(index);
-        let x = match x {
-            PoolEntry::Object(o) => match o {
-                Object::Int(_) => o,
-                _ => panic!(),
+        match self.program.pool.get_by_index(index) {
+            PoolEntry::Object(object) => match object {
+                Object::Int(_) => frame.stack_push(object),
+                _ => panic!("[ildc] expects int"),
             },
-            _ => panic!(),
+            _ => panic!("[ildc] expects int"),
         };
-        frame.stack_push(x);
     }
 
     fn fn_loader(&self, pool_index: usize) -> Function {
-        let fn_index = match self.program.pool.get_by_index(pool_index) {
-            PoolEntry::FunctionRef(fn_ref) => fn_ref.fn_index,
-            _ => panic!(),
-        };
-
-        self.program.load_fn(fn_index)
+        match self.program.pool.get_by_index(pool_index) {
+            PoolEntry::FunctionRef(fn_ref) => self.program.load_fn(fn_ref.fn_index),
+            _ => {
+                panic!("fn_loader expects a `FunctionRef` at provided index");
+            }
+        }
     }
 }

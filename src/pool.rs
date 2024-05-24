@@ -4,7 +4,7 @@ use crate::object::Object;
 pub struct FunctionRef {
     pub name_index: usize,
     pub signature_index: usize,
-    pub fn_index: usize,
+    pub fn_index: usize, // index within the list of functions
 }
 
 impl FunctionRef {
@@ -42,7 +42,7 @@ impl Pool {
 
     pub fn get_by_index(&self, i: usize) -> PoolEntry {
         if self.entries.len() <= i {
-            panic!("[Error]: Pool out of range")
+            panic!("[Error]: Pool index out of range")
         }
         self.entries[i].clone()
     }

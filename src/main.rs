@@ -1,7 +1,6 @@
 mod bytecode;
 mod core;
 mod frame;
-mod function;
 mod object;
 mod pool;
 mod program;
@@ -9,10 +8,9 @@ mod stack;
 
 use bytecode::{Bytecode, Opcode};
 use core::Runtime;
-use function::Function;
 use object::Object;
 use pool::{FunctionRef, Pool, PoolEntry};
-use program::Program;
+use program::{Function, Program};
 
 fn main() {
     let mut pool = Pool::make();
