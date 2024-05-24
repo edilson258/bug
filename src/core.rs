@@ -1,6 +1,10 @@
-use crate::bytecode::Instr;
+use std::usize;
+
+use crate::bytecode::Opcode;
 use crate::frame::Frame;
+use crate::function::Function;
 use crate::object::Object;
+use crate::pool::PoolEntry;
 use crate::program::Program;
 use crate::stack::Stack;
 
@@ -22,7 +26,7 @@ impl Runtime {
     /// Will return a ready Runtime instance
     ///
     pub fn setup(program: Program) -> Self {
-        let main_fn = program.find_fn("main");
+        let main_fn = program.fns[0].clone();
         let main_frame = Frame::make(main_fn.code, main_fn.max_locals, main_fn.max_stack);
 
         let mut stack = Stack::make(main_fn.max_stack);
@@ -45,14 +49,14 @@ impl Runtime {
         loop {
             let instr = frame.fetch_next_instr();
             match instr {
-                Instr::IAdd => self.iadd(&mut frame),
-                Instr::IMul => self.imul(&mut frame),
-                Instr::IDiv => self.idiv(&mut frame),
-                Instr::ILdc(index) => self.ildc(index, &mut frame),
-                Instr::ILoad(index) => frame.opstack.push(frame.locals.get_by_index(index)),
-                Instr::IStore(index) => frame.locals.store_at(index, frame.opstack.pop()),
-                Instr::Invoke(name) => {
-                    let callee = self.program.find_fn(&name);
+                Opcode::IAdd => self.iadd(&mut frame),
+                Opcode::IMul => self.imul(&mut frame),
+                Opcode::IDiv => self.idiv(&mut frame),
+                Opcode::ILdc(index) => self.ildc(index, &mut frame),
+                Opcode::ILoad(index) => frame.opstack.push(frame.locals.get_by_index(index)),
+                Opcode::IStore(index) => frame.locals.store_at(index, frame.opstack.pop()),
+                Opcode::Invoke(index) => {
+                    let callee = self.fn_loader(index);
                     let mut callee_frame =
                         Frame::make(callee.code, callee.max_locals, callee.max_stack);
 
@@ -63,45 +67,45 @@ impl Runtime {
                     self.stack.push(frame.clone());
                     frame = callee_frame
                 }
-                Instr::IReturn => {
+                Opcode::IReturn => {
                     let x = frame.stack_pop();
                     let mut outher = self.stack.pop();
                     outher.stack_push(x);
                     frame = outher
                 }
-                Instr::Goto(offset) => frame.pc = offset,
-                Instr::Return => {
+                Opcode::Goto(offset) => frame.pc = offset,
+                Opcode::Return => {
                     if self.stack.is_empty() {
                         break;
                     }
                     frame = self.stack.pop();
                 }
-                Instr::IfICmpE(offset) => {
+                Opcode::IfICmpE(offset) => {
                     let (fst, snd) = self.ipop_two(&mut frame);
                     if fst == snd {
                         frame.pc = offset
                     }
                 }
-                Instr::IfICmpNE(offset) => {
+                Opcode::IfICmpNE(offset) => {
                     let (fst, snd) = self.ipop_two(&mut frame);
                     if fst != snd {
                         frame.pc = offset
                     }
                 }
-                Instr::IfICmpLT(offset) => {
+                Opcode::IfICmpLT(offset) => {
                     let (fst, snd) = self.ipop_two(&mut frame);
                     if fst < snd {
                         frame.pc = offset;
                     }
                 }
-                Instr::IfICmpGT(offset) => {
+                Opcode::IfICmpGT(offset) => {
                     let (fst, snd) = self.ipop_two(&mut frame);
                     if fst > snd {
                         frame.pc = offset;
                     }
                 }
-                Instr::IIncr(index, constant) => self.iincr(&mut frame, index, constant),
-                Instr::Bipush(iconst) => frame.opstack.push(Object::Int(iconst)),
+                Opcode::IIncr(index, constant) => self.iincr(&mut frame, index, constant),
+                Opcode::Bipush(iconst) => frame.opstack.push(Object::Int(iconst)),
             }
         }
 
@@ -146,6 +150,22 @@ impl Runtime {
 
     fn ildc(&mut self, index: usize, frame: &mut Frame) {
         let x = self.program.pool.get_by_index(index);
+        let x = match x {
+            PoolEntry::Object(o) => match o {
+                Object::Int(_) => o,
+                _ => panic!(),
+            },
+            _ => panic!(),
+        };
         frame.stack_push(x);
+    }
+
+    fn fn_loader(&self, pool_index: usize) -> Function {
+        let fn_index = match self.program.pool.get_by_index(pool_index) {
+            PoolEntry::FunctionRef(fn_ref) => fn_ref.fn_index,
+            _ => panic!(),
+        };
+
+        self.program.load_fn(fn_index)
     }
 }
