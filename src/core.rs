@@ -1,7 +1,10 @@
-use crate::bytecode::Instr;
+use std::usize;
+
+use crate::bytecode::Opcode;
 use crate::frame::Frame;
 use crate::object::Object;
-use crate::program::Program;
+use crate::pool::PoolEntry;
+use crate::program::{Function, Program};
 use crate::stack::Stack;
 
 pub struct Runtime {
@@ -22,7 +25,7 @@ impl Runtime {
     /// Will return a ready Runtime instance
     ///
     pub fn setup(program: Program) -> Self {
-        let main_fn = program.find_fn("main");
+        let main_fn = program.fns[0].clone(); // `main` fn must be in the index 0
         let main_frame = Frame::make(main_fn.code, main_fn.max_locals, main_fn.max_stack);
 
         let mut stack = Stack::make(main_fn.max_stack);
@@ -45,12 +48,14 @@ impl Runtime {
         loop {
             let instr = frame.fetch_next_instr();
             match instr {
-                Instr::IAdd => self.iadd(&mut frame),
-                Instr::ILdc(index) => self.ildc(index, &mut frame),
-                Instr::ILoad(index) => frame.opstack.push(frame.locals.get_by_index(index)),
-                Instr::IStore(index) => frame.locals.store_at(index, frame.opstack.pop()),
-                Instr::Invoke(name) => {
-                    let callee = self.program.find_fn(&name);
+                Opcode::IAdd => self.iadd(&mut frame),
+                Opcode::IMul => self.imul(&mut frame),
+                Opcode::IDiv => self.idiv(&mut frame),
+                Opcode::ILdc(index) => self.ildc(index, &mut frame),
+                Opcode::ILoad(index) => frame.opstack.push(frame.locals.get_by_index(index)),
+                Opcode::IStore(index) => frame.locals.store_at(index, frame.opstack.pop()),
+                Opcode::Invoke(index) => {
+                    let callee = self.fn_loader(index);
                     let mut callee_frame =
                         Frame::make(callee.code, callee.max_locals, callee.max_stack);
 
@@ -61,45 +66,45 @@ impl Runtime {
                     self.stack.push(frame.clone());
                     frame = callee_frame
                 }
-                Instr::IReturn => {
-                    let x = frame.stack_pop();
+                Opcode::IReturn => {
+                    let object_int = frame.stack_pop();
                     let mut outher = self.stack.pop();
-                    outher.stack_push(x);
+                    outher.stack_push(object_int); // @TODO: check if object is int
                     frame = outher
                 }
-                Instr::Goto(offset) => frame.pc = offset,
-                Instr::Return => {
+                Opcode::Goto(offset) => frame.pc = offset,
+                Opcode::Return => {
                     if self.stack.is_empty() {
                         break;
                     }
                     frame = self.stack.pop();
                 }
-                Instr::IfICmpE(offset) => {
+                Opcode::IfICmpE(offset) => {
                     let (fst, snd) = self.ipop_two(&mut frame);
                     if fst == snd {
                         frame.pc = offset
                     }
                 }
-                Instr::IfICmpNE(offset) => {
+                Opcode::IfICmpNE(offset) => {
                     let (fst, snd) = self.ipop_two(&mut frame);
                     if fst != snd {
                         frame.pc = offset
                     }
                 }
-                Instr::IfICmpLT(offset) => {
+                Opcode::IfICmpLT(offset) => {
                     let (fst, snd) = self.ipop_two(&mut frame);
                     if fst < snd {
                         frame.pc = offset;
                     }
                 }
-                Instr::IfICmpGT(offset) => {
+                Opcode::IfICmpGT(offset) => {
                     let (fst, snd) = self.ipop_two(&mut frame);
                     if fst > snd {
                         frame.pc = offset;
                     }
                 }
-                Instr::IIncr(index, constant) => self.iincr(&mut frame, index, constant),
-                Instr::Bipush(iconst) => frame.opstack.push(Object::Int(iconst)),
+                Opcode::IIncr(index, constant) => self.iincr(&mut frame, index, constant),
+                Opcode::Bipush(iconst) => frame.opstack.push(Object::Int(iconst)),
             }
         }
 
@@ -110,11 +115,11 @@ impl Runtime {
     fn ipop_two(&mut self, frame: &mut Frame) -> (i32, i32) {
         let snd = match frame.stack_pop() {
             Object::Int(x) => x,
-            _ => panic!("[ifcmpe] expects int on stack"),
+            _ => panic!("[ipop] expects int on stack"),
         };
         let fst = match frame.stack_pop() {
             Object::Int(y) => y,
-            _ => panic!("[ifcmpe] expects int on stack"),
+            _ => panic!("[ipop] expects int on stack"),
         };
 
         (fst, snd)
@@ -123,7 +128,7 @@ impl Runtime {
     fn iincr(&mut self, frame: &mut Frame, index: usize, constant: i32) {
         match frame.locals.get_as_ref(index) {
             Object::Int(x) => *x += constant,
-            _ => panic!("[iincr] expects an int"),
+            _ => panic!("[iincr] expects int"),
         };
     }
 
@@ -132,8 +137,35 @@ impl Runtime {
         frame.stack_push(Object::Int(lhs + rhs));
     }
 
+    fn imul(&mut self, frame: &mut Frame) {
+        let (lhs, rhs) = self.ipop_two(frame);
+        frame.stack_push(Object::Int(lhs * rhs));
+    }
+
+    fn idiv(&mut self, frame: &mut Frame) {
+        let (lhs, rhs) = self.ipop_two(frame);
+        frame.stack_push(Object::Int(lhs / rhs));
+    }
+
+    /// Loads an integer object from pool to the operand stack
+    /// panic if the entry in the provided index isn't the expected
+    ///
     fn ildc(&mut self, index: usize, frame: &mut Frame) {
-        let x = self.program.pool.get_by_index(index);
-        frame.stack_push(x);
+        match self.program.pool.get_by_index(index) {
+            PoolEntry::Object(object) => match object {
+                Object::Int(_) => frame.stack_push(object),
+                _ => panic!("[ildc] expects int"),
+            },
+            _ => panic!("[ildc] expects int"),
+        };
+    }
+
+    fn fn_loader(&self, pool_index: usize) -> Function {
+        match self.program.pool.get_by_index(pool_index) {
+            PoolEntry::FunctionRef(fn_ref) => self.program.load_fn(fn_ref.fn_index),
+            _ => {
+                panic!("fn_loader expects a `FunctionRef` at provided index");
+            }
+        }
     }
 }

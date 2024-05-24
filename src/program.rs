@@ -1,6 +1,6 @@
 use std::process::exit;
 
-use crate::function::Function;
+use crate::bytecode::Bytecode;
 use crate::pool::Pool;
 
 pub struct Program {
@@ -13,12 +13,61 @@ impl Program {
         Self { pool, fns }
     }
 
-    pub fn find_fn(&self, name: &str) -> Function {
-        let func = self.fns.iter().find(|f| f.name.as_str() == name);
-        if func.is_none() {
-            eprintln!("[Error]: No function named {}", name);
+    /// Gets a function from list of function and panic if index is out of range
+    ///
+    /// # Parameters
+    /// - `index`: The index obtained on `append_fn`
+    ///
+    /// # Return
+    /// - `Function`: A function in the provided index
+    ///
+    pub fn load_fn(&self, index: usize) -> Function {
+        if index >= self.fns.len() {
+            eprintln!("[Error]: Unable to get function: IndexOutOfRange");
             exit(1);
         }
-        func.unwrap().clone()
+
+        self.fns[index].clone()
+    }
+
+    /// Appends a function to the list of functions
+    ///
+    /// # Parameters
+    /// - `function`: an instance of `Function`
+    ///
+    /// # Return
+    /// - `index`: of within the list of functions
+    ///
+    pub fn append_fn(&mut self, func: Function) -> usize {
+        let index = self.fns.len();
+        self.fns.push(func);
+        index
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Function {
+    pub fn_pool_ref: usize,
+    pub arity: usize,
+    pub code: Bytecode,
+    pub max_stack: usize,
+    pub max_locals: usize,
+}
+
+impl Function {
+    pub fn make(
+        fn_pool_ref: usize,
+        arity: usize,
+        max_stack: usize,
+        max_locals: usize,
+        code: Bytecode,
+    ) -> Self {
+        Self {
+            fn_pool_ref,
+            arity,
+            code,
+            max_stack,
+            max_locals,
+        }
     }
 }

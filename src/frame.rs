@@ -1,6 +1,6 @@
 use std::process::exit;
 
-use crate::bytecode::{Bytecode, Instr};
+use crate::bytecode::{Bytecode, Opcode};
 use crate::object::Object;
 use crate::stack::Stack;
 
@@ -78,7 +78,7 @@ impl Frame {
         }
     }
 
-    pub fn fetch_next_instr(&mut self) -> Instr {
+    pub fn fetch_next_instr(&mut self) -> Opcode {
         let instr = self.code.fetch_by_index(self.pc);
         self.pc += 1;
         instr

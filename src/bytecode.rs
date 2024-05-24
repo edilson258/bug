@@ -2,15 +2,17 @@ use core::fmt;
 use std::{process::exit, usize};
 
 #[derive(Debug, Clone)]
-pub enum Instr {
+pub enum Opcode {
     // arithmetic
     IAdd,
+    IMul,
+    IDiv,
     IIncr(usize, i32),
 
     // control flow
     Return,
     IReturn,
-    Invoke(String),
+    Invoke(usize),
 
     // jumps
     Goto(usize),
@@ -28,15 +30,15 @@ pub enum Instr {
 
 #[derive(Debug, Clone)]
 pub struct Bytecode {
-    pub instrs: Vec<Instr>,
+    pub instrs: Vec<Opcode>,
 }
 
 impl Bytecode {
-    pub fn make(instrs: Vec<Instr>) -> Self {
+    pub fn make(instrs: Vec<Opcode>) -> Self {
         Self { instrs }
     }
 
-    pub fn fetch_by_index(&self, index: usize) -> Instr {
+    pub fn fetch_by_index(&self, index: usize) -> Opcode {
         self.check_bound(index);
         self.instrs[index].clone()
     }
@@ -52,7 +54,7 @@ impl Bytecode {
     }
 }
 
-impl fmt::Display for Instr {
+impl fmt::Display for Opcode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::IAdd => write!(f, "[iadd]"),
@@ -69,6 +71,8 @@ impl fmt::Display for Instr {
             Self::IfICmpNE(index) => write!(f, "[IfICmpNE] {}", index),
             Self::IIncr(index, iconst) => write!(f, "[incr] {} by {}", index, iconst),
             Self::Bipush(iconst) => write!(f, "[bipush] {}", iconst),
+            Self::IMul => write!(f, "[imul]"),
+            Self::IDiv => write!(f, "[idiv]"),
         }
     }
 }

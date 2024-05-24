@@ -1,9 +1,10 @@
 use core::fmt;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Object {
     Null,
     Int(i32),
+    String(String),
 }
 
 impl Default for Object {
@@ -15,8 +16,9 @@ impl Default for Object {
 impl fmt::Display for Object {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Int(x) => write!(f, "{}", x),
             Self::Null => write!(f, "NULL"),
+            Self::Int(x) => write!(f, "{}", x),
+            Self::String(x) => write!(f, "{}", x),
         }
     }
 }
