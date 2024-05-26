@@ -1,3 +1,5 @@
+use core::fmt;
+
 pub type AST = Vec<Statment>;
 
 #[derive(Debug)]
@@ -9,6 +11,14 @@ pub enum Literal {
 #[derive(Debug)]
 pub enum Infix {
     Plus,
+}
+
+impl fmt::Display for Infix {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Plus => write!(f, "+"),
+        }
+    }
 }
 
 #[derive(Debug)]

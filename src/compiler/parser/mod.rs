@@ -94,6 +94,7 @@ impl<'a> Parser<'a> {
     fn parse_expr(&mut self, precedence: Precedence) -> Result<Expression, PError> {
         let mut lhs = match self.curr_token {
             Token::Int(x) => Expression::Literal(Literal::Int(x)),
+            Token::String(ref x) => Expression::Literal(Literal::String(x.clone())),
             _ => {
                 return Err(PError {
                     kind: PEKind::Syntax,
