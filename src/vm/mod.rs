@@ -1,16 +1,12 @@
-mod bytecode;
 mod core;
 mod frame;
-mod object;
-mod pool;
-mod program;
 mod stack;
 
-use bytecode::{Bytecode, Opcode};
 use core::Runtime;
-use object::Object;
-use pool::{FunctionRef, Pool, PoolEntry};
-use program::{Function, Program};
+use spider_vm::bytecode::{Bytecode, Opcode};
+use spider_vm::object::Object;
+use spider_vm::pool::{FunctionRef, Pool, PoolEntry};
+use spider_vm::program::{Function, Program};
 
 fn main() {
     let mut pool = Pool::make();

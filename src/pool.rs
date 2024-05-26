@@ -26,6 +26,7 @@ pub enum PoolEntry {
 
 type PoolEntries = Vec<PoolEntry>;
 
+#[derive(Debug, Clone)]
 pub struct Pool {
     pub entries: PoolEntries,
 }

@@ -1,5 +1,7 @@
 use core::fmt;
 
+use crate::analysis::Type;
+
 pub type AST = Vec<Statment>;
 
 #[derive(Debug)]
@@ -25,6 +27,18 @@ impl fmt::Display for Infix {
 pub enum Expression {
     Literal(Literal),
     Infix(Box<Expression>, Infix, Box<Expression>),
+}
+
+impl Expression {
+    pub fn ask_type(&self) -> Type {
+        match self {
+            Self::Literal(literal) => match literal {
+                Literal::Int(_) => Type::Integer,
+                Literal::String(_) => Type::String,
+            },
+            Self::Infix(lhs, _, _) => lhs.ask_type(),
+        }
+    }
 }
 
 #[derive(Debug)]

@@ -1,8 +1,8 @@
 use std::process::exit;
 
-use crate::bytecode::{Bytecode, Opcode};
-use crate::object::Object;
 use crate::stack::Stack;
+use spider_vm::bytecode::{Bytecode, Opcode};
+use spider_vm::object::Object;
 
 /// The max number of local variables a function can hold
 ///

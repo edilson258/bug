@@ -3,6 +3,7 @@ use std::process::exit;
 use crate::bytecode::Bytecode;
 use crate::pool::Pool;
 
+#[derive(Debug)]
 pub struct Program {
     pub pool: Pool,
     pub fns: Vec<Function>,

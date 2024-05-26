@@ -1,16 +1,8 @@
-mod ast;
-mod lexer;
-mod parser;
-mod token;
-
+use crate::ast::{Expression, Infix, Literal, Statment, AST};
 use core::fmt;
-use std::process::exit;
-
-use crate::{lexer::Lexer, parser::Parser};
-use ast::{Expression, Infix, Literal, Statment, AST};
 
 #[derive(Debug, PartialEq)]
-enum Type {
+pub enum Type {
     Integer,
     String,
 }
@@ -28,7 +20,7 @@ impl fmt::Display for AnaliserErrorKind {
     }
 }
 
-struct AnaliserError {
+pub struct AnaliserError {
     kind: AnaliserErrorKind,
     msg: String,
 }
@@ -48,9 +40,9 @@ impl fmt::Display for AnaliserError {
     }
 }
 
-type AnaliserErrors = Vec<AnaliserError>;
+pub type AnaliserErrors = Vec<AnaliserError>;
 
-struct Analiser {}
+pub struct Analiser {}
 
 impl Analiser {
     pub fn make() -> Self {
@@ -115,33 +107,4 @@ impl Analiser {
 
         Ok(lhs_type)
     }
-}
-
-fn main() {
-    let input = "1 + 2".to_string().chars().collect::<Vec<char>>();
-    let mut l = Lexer::new(&input);
-    let mut p = Parser::new(&mut l);
-
-    let ast = match p.parse() {
-        Ok(ast) => ast,
-        Err(errors) => {
-            for err in errors {
-                eprintln!("{}", err);
-            }
-            exit(1)
-        }
-    };
-
-    let mut analiser = Analiser::make();
-    match analiser.analise(&ast) {
-        Ok(()) => {}
-        Err(errors) => {
-            for err in errors {
-                eprintln!("{}", err);
-            }
-            exit(1)
-        }
-    }
-
-    println!("{:#?}", ast);
 }

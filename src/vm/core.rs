@@ -1,11 +1,11 @@
 use std::usize;
 
-use crate::bytecode::Opcode;
 use crate::frame::Frame;
-use crate::object::Object;
-use crate::pool::PoolEntry;
-use crate::program::{Function, Program};
 use crate::stack::Stack;
+use spider_vm::bytecode::Opcode;
+use spider_vm::object::Object;
+use spider_vm::pool::PoolEntry;
+use spider_vm::program::{Function, Program};
 
 pub struct Runtime {
     program: Program,

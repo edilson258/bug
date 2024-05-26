@@ -11,8 +11,8 @@ serde = { version = "1.0.202", features = ["derive"] }
 
 [[bin]]
 name = "compiler"
-path = "src/compiler/main.rs"
+path = "src/compiler/mod.rs"
 
 [[bin]]
 name = "spider"
-path = "src/main.rs"
+path = "src/vm/mod.rs"
