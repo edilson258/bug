@@ -1,6 +1,8 @@
+use serde::{Deserialize, Serialize};
+
 use crate::object::Object;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FunctionRef {
     pub name_index: usize,
     pub signature_index: usize,
@@ -17,7 +19,7 @@ impl FunctionRef {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum PoolEntry {
     FunctionRef(FunctionRef),
     Object(Object),
@@ -26,6 +28,7 @@ pub enum PoolEntry {
 
 type PoolEntries = Vec<PoolEntry>;
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Pool {
     pub entries: PoolEntries,
 }

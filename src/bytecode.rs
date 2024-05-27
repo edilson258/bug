@@ -1,7 +1,9 @@
 use core::fmt;
 use std::{process::exit, usize};
 
-#[derive(Debug, Clone)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Opcode {
     // arithmetic
     IAdd,
@@ -22,13 +24,14 @@ pub enum Opcode {
     IfICmpNE(usize),
 
     // data handlers
+    Ldc(usize),
     ILdc(usize),
     ILoad(usize),
     IStore(usize),
     Bipush(i32),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Bytecode {
     pub instrs: Vec<Opcode>,
 }
@@ -73,6 +76,7 @@ impl fmt::Display for Opcode {
             Self::Bipush(iconst) => write!(f, "[bipush] {}", iconst),
             Self::IMul => write!(f, "[imul]"),
             Self::IDiv => write!(f, "[idiv]"),
+            Self::Ldc(usize) => write!(f, "[ldc] {}", usize),
         }
     }
 }
