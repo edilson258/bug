@@ -1,6 +1,8 @@
 use core::fmt;
 
-#[derive(Debug, Clone, PartialEq)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Object {
     Null,
     Int(i32),

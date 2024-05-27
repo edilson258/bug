@@ -1,7 +1,9 @@
 use core::fmt;
 use std::{process::exit, usize};
 
-#[derive(Debug, Clone)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Opcode {
     // arithmetic
     IAdd,
@@ -29,7 +31,7 @@ pub enum Opcode {
     Bipush(i32),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Bytecode {
     pub instrs: Vec<Opcode>,
 }

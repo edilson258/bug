@@ -105,6 +105,7 @@ impl Runtime {
                 }
                 Opcode::IIncr(index, constant) => self.iincr(&mut frame, index, constant),
                 Opcode::Bipush(iconst) => frame.opstack.push(Object::Int(iconst)),
+                Opcode::Ldc(_) => todo!(),
             }
         }
 

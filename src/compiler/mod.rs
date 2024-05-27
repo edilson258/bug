@@ -4,6 +4,8 @@ mod lexer;
 mod parser;
 mod token;
 
+use std::fs;
+use std::io::Write;
 use std::process::exit;
 
 use crate::analysis::Analiser;
@@ -35,6 +37,8 @@ impl CodeGenerator {
         for stmt in ast {
             self.generate_stmt(stmt);
         }
+
+        self.bytecode.push(Opcode::Return);
 
         let main_fn = Function {
             fn_pool_ref: self
@@ -91,7 +95,7 @@ impl CodeGenerator {
 }
 
 fn main() {
-    let input = "1 + 2".to_string().chars().collect::<Vec<char>>();
+    let input = "34 + 35".to_string().chars().collect::<Vec<char>>();
     let mut l = Lexer::new(&input);
     let mut p = Parser::new(&mut l);
 
@@ -119,5 +123,8 @@ fn main() {
     let mut generator = CodeGenerator::make();
     let program = generator.gen(ast);
 
-    println!("{:#?}", program);
+    let bin = bincode::serialize(&program).unwrap();
+
+    let mut file = fs::File::create("out.bin").unwrap();
+    file.write(&bin).unwrap();
 }

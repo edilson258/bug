@@ -1,9 +1,11 @@
 use std::process::exit;
 
+use serde::{Deserialize, Serialize};
+
 use crate::bytecode::Bytecode;
 use crate::pool::Pool;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Program {
     pub pool: Pool,
     pub fns: Vec<Function>,
@@ -46,7 +48,7 @@ impl Program {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Function {
     pub fn_pool_ref: usize,
     pub arity: usize,
