@@ -4,10 +4,13 @@ mod codegen;
 mod lexer;
 mod parser;
 mod token;
+mod utils;
 
-use std::fs;
 use std::io::Write;
 use std::process::exit;
+use std::{env, fs};
+
+use utils::read_file;
 
 use crate::analysis::Analiser;
 use crate::codegen::CodeGenerator;
@@ -15,7 +18,23 @@ use crate::lexer::Lexer;
 use crate::parser::Parser;
 
 fn main() {
-    let input = "34 + 35".to_string().chars().collect::<Vec<char>>();
+    let args: Vec<String> = env::args().collect();
+    if args.len() <= 1 {
+        eprintln!("[Error]: No input file provided");
+        return;
+    }
+    let file_content = match read_file(&args[1]) {
+        Ok(contents) => contents,
+        Err(err) => {
+            eprintln!(
+                "[Error]: Couldn't read file {} {}",
+                args[1],
+                err.to_string()
+            );
+            return;
+        }
+    };
+    let input = file_content.to_string().chars().collect::<Vec<char>>();
     let mut l = Lexer::new(&input);
     let mut p = Parser::new(&mut l);
 
