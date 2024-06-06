@@ -54,6 +54,18 @@ impl<'a> Lexer<'a> {
 
         let token = match self.curr_char {
             '+' => Some(Token::Plus),
+            '(' => Some(Token::Lparen),
+            ')' => Some(Token::Rparen),
+            ';' => Some(Token::Semicolon),
+            '.' => Some(Token::Dot),
+            '-' => {
+                if self.next_char_is('>') {
+                    self.read_char();
+                    Some(Token::Arrow)
+                } else {
+                    Some(Token::Minus)
+                }
+            }
             '"' => {
                 let token = self.read_string();
                 self.read_char();
