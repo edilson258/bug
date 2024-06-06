@@ -40,11 +40,9 @@ fn main() {
 
     let mut ast = match p.parse() {
         Ok(ast) => ast,
-        Err(errors) => {
-            for err in errors {
-                eprintln!("{}", err);
-            }
-            exit(1)
+        Err(err) => {
+            println!("[Syntax Error]: {}", err);
+            exit(1);
         }
     };
 
