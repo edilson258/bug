@@ -1,4 +1,4 @@
-use crate::analysis;
+use crate::analysis::{self, Type};
 use crate::ast::{Expression, Infix, Literal, Statment, AST};
 
 use spider_vm::bytecode::{Bytecode, Opcode};
@@ -44,6 +44,7 @@ impl CodeGenerator {
     fn generate_stmt(&mut self, stmt: Statment) {
         match stmt {
             Statment::Expression(expr) => self.generate_expression(expr),
+            _ => todo!(),
         }
     }
 
@@ -51,11 +52,12 @@ impl CodeGenerator {
         match expression {
             Expression::Literal(literal) => self.generate_literal(literal),
             Expression::Infix(lhs, infix, rhs) => self.generate_infix(*lhs, infix, *rhs),
+            _ => todo!(),
         }
     }
 
     fn generate_infix(&mut self, lhs: Expression, infix: Infix, rhs: Expression) {
-        let operands_type = lhs.ask_type();
+        let operands_type = self.ask_expression_type(&lhs);
         self.generate_expression(lhs);
         self.generate_expression(rhs);
 
@@ -79,5 +81,15 @@ impl CodeGenerator {
 
     fn append_instruction(&mut self, opcode: Opcode) {
         self.bytecode.push(opcode);
+    }
+
+    fn ask_expression_type(&self, expression: &Expression) -> Type {
+        match expression {
+            Expression::Literal(literal) => match literal {
+                Literal::Int(_) => Type::Integer,
+                Literal::String(_) => Type::String,
+            },
+            _ => todo!(),
+        }
     }
 }

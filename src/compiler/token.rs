@@ -24,6 +24,7 @@ pub enum Token {
 impl Token {
     pub fn precedence(&self) -> Precedence {
         match self {
+            Token::Lparen => Precedence::Call,
             Token::Plus => Precedence::Additive,
             _ => Precedence::Lowest,
         }

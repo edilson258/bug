@@ -72,6 +72,7 @@ impl Analiser {
                 Ok(_) => Ok(()),
                 Err(err) => Err(err),
             },
+            _ => todo!(),
         }
     }
 
@@ -79,6 +80,7 @@ impl Analiser {
         match expression {
             Expression::Literal(literal) => Ok(self.analise_literal_expression(literal)),
             Expression::Infix(lhs, infix, rhs) => self.analise_infix_expression(lhs, infix, rhs),
+            _ => todo!(),
         }
     }
 

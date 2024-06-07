@@ -1,7 +1,5 @@
 use core::fmt;
 
-use crate::analysis::Type;
-
 pub type AST = Vec<Statment>;
 
 #[derive(Debug)]
@@ -24,30 +22,49 @@ impl fmt::Display for Infix {
 }
 
 #[derive(Debug)]
-pub enum Expression {
-    Literal(Literal),
-    Infix(Box<Expression>, Infix, Box<Expression>),
+pub struct FunctionCall {
+    name: String,
+    args: Vec<Expression>,
 }
 
-impl Expression {
-    pub fn ask_type(&self) -> Type {
-        match self {
-            Self::Literal(literal) => match literal {
-                Literal::Int(_) => Type::Integer,
-                Literal::String(_) => Type::String,
-            },
-            Self::Infix(lhs, _, _) => lhs.ask_type(),
-        }
+impl FunctionCall {
+    pub fn make(name: String, args: Vec<Expression>) -> Self {
+        Self { name, args }
+    }
+}
+
+#[derive(Debug)]
+pub enum Expression {
+    Identifier(String),
+    Literal(Literal),
+    Infix(Box<Expression>, Infix, Box<Expression>),
+    Call(FunctionCall),
+}
+
+pub type BlockStatment = Vec<Statment>;
+
+#[derive(Debug)]
+pub struct FunctionDeclaration {
+    name: String,
+    body: BlockStatment,
+}
+
+impl FunctionDeclaration {
+    pub fn make(name: String, body: BlockStatment) -> Self {
+        Self { name, body }
     }
 }
 
 #[derive(Debug)]
 pub enum Statment {
     Expression(Expression),
+    Function(FunctionDeclaration),
+    BlockStatment(BlockStatment),
 }
 
 #[derive(Debug, PartialEq, PartialOrd)]
 pub enum Precedence {
     Lowest = 0,
     Additive = 1,
+    Call = 2,
 }
