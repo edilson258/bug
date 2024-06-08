@@ -39,7 +39,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn curr_token_is(&self, token: Token) -> bool {
+    fn is_curr_token(&self, token: Token) -> bool {
         self.curr_token == token
     }
 
@@ -60,7 +60,6 @@ impl<'a> Parser<'a> {
             let stmt = self.parse_statment()?;
             ast.push(stmt);
         }
-        println!("{:#?} {} {}", &ast, self.curr_token, self.next_token);
         Ok(ast)
     }
 
@@ -88,13 +87,15 @@ impl<'a> Parser<'a> {
         self.bump_expected(Token::Arrow)?;
 
         let body = self.parse_block_statment()?;
-        Ok(Statment::Function(FunctionDeclaration::make(name, body)))
+        Ok(Statment::FunctionDeclaration(FunctionDeclaration::make(
+            name, body,
+        )))
     }
 
     fn parse_block_statment(&mut self) -> Result<BlockStatment, String> {
         let mut block: BlockStatment = vec![];
         // every block must end  with Semicolon.
-        while !self.curr_token_is(Token::Semicolon) {
+        while !self.is_curr_token(Token::Semicolon) {
             block.push(self.parse_statment()?);
         }
         self.bump_expected(Token::Semicolon)?;
@@ -137,7 +138,10 @@ impl<'a> Parser<'a> {
         let arg = self.parse_expression(Precedence::Call)?;
         self.bump()?;
         self.bump_expected(Token::Rparen)?;
-        Ok(Expression::Call(FunctionCall::make(fn_name, vec![arg])))
+        Ok(Expression::FunctionCall(FunctionCall::make(
+            fn_name,
+            vec![arg],
+        )))
     }
 
     fn parse_infix_expression(&mut self, lhs: Expression) -> Result<Expression, String> {

@@ -38,7 +38,7 @@ pub enum Expression {
     Identifier(String),
     Literal(Literal),
     Infix(Box<Expression>, Infix, Box<Expression>),
-    Call(FunctionCall),
+    FunctionCall(FunctionCall),
 }
 
 pub type BlockStatment = Vec<Statment>;
@@ -58,8 +58,7 @@ impl FunctionDeclaration {
 #[derive(Debug)]
 pub enum Statment {
     Expression(Expression),
-    Function(FunctionDeclaration),
-    BlockStatment(BlockStatment),
+    FunctionDeclaration(FunctionDeclaration),
 }
 
 #[derive(Debug, PartialEq, PartialOrd)]
