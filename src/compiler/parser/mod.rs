@@ -1,3 +1,4 @@
+use crate::analysis::Type;
 use crate::ast::{BlockStatment, FunctionCall, FunctionDeclaration};
 
 use super::ast::{Expression, Infix, Literal, Precedence, Statment, AST};
@@ -85,13 +86,17 @@ impl<'a> Parser<'a> {
         self.bump_expected(Token::Lparen)?;
         self.bump_expected(Token::Rparen)?;
 
-        // @TODO: parse return type
-
-        self.bump_expected(Token::Arrow)?;
+        let return_type = match self.curr_token {
+            Token::Arrow => Type::Void,
+            _ => todo!(),
+        };
+        self.bump()?;
 
         let body = self.parse_block_statment()?;
         Ok(Statment::FunctionDeclaration(FunctionDeclaration::make(
-            name, None, body,
+            name,
+            return_type,
+            body,
         )))
     }
 

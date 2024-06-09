@@ -48,12 +48,12 @@ pub type BlockStatment = Vec<Statment>;
 #[derive(Debug)]
 pub struct FunctionDeclaration {
     pub name: String,
-    pub return_type: Option<Type>,
+    pub return_type: Type,
     pub body: BlockStatment,
 }
 
 impl FunctionDeclaration {
-    pub fn make(name: String, return_type: Option<Type>, body: BlockStatment) -> Self {
+    pub fn make(name: String, return_type: Type, body: BlockStatment) -> Self {
         Self {
             name,
             return_type,

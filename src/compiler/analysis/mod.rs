@@ -109,7 +109,7 @@ impl Analiser {
             )));
         }
 
-        let expected_return_type = fn_decl.return_type.clone().unwrap_or(Type::Void);
+        let expected_return_type = fn_decl.return_type.clone();
         self.analise_block_statment(&fn_decl.body, &expected_return_type)?;
 
         self.scope.insert(
