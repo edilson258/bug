@@ -84,11 +84,14 @@ impl<'a> Parser<'a> {
         // @TODO: handle function's params.
         self.bump_expected(Token::Lparen)?;
         self.bump_expected(Token::Rparen)?;
+
+        // @TODO: parse return type
+
         self.bump_expected(Token::Arrow)?;
 
         let body = self.parse_block_statment()?;
         Ok(Statment::FunctionDeclaration(FunctionDeclaration::make(
-            name, body,
+            name, None, body,
         )))
     }
 

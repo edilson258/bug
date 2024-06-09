@@ -1,5 +1,7 @@
 use core::fmt;
 
+use crate::analysis::Type;
+
 pub type AST = Vec<Statment>;
 
 #[derive(Debug)]
@@ -23,8 +25,8 @@ impl fmt::Display for Infix {
 
 #[derive(Debug)]
 pub struct FunctionCall {
-    name: String,
-    args: Vec<Expression>,
+    pub name: String,
+    pub args: Vec<Expression>,
 }
 
 impl FunctionCall {
@@ -45,13 +47,18 @@ pub type BlockStatment = Vec<Statment>;
 
 #[derive(Debug)]
 pub struct FunctionDeclaration {
-    name: String,
-    body: BlockStatment,
+    pub name: String,
+    pub return_type: Option<Type>,
+    pub body: BlockStatment,
 }
 
 impl FunctionDeclaration {
-    pub fn make(name: String, body: BlockStatment) -> Self {
-        Self { name, body }
+    pub fn make(name: String, return_type: Option<Type>, body: BlockStatment) -> Self {
+        Self {
+            name,
+            return_type,
+            body,
+        }
     }
 }
 
