@@ -60,6 +60,8 @@ impl<'a> Parser<'a> {
         while self.curr_token != Token::Eof {
             let stmt = self.parse_statment()?;
             ast.push(stmt);
+            // every block must end  with Semicolon.
+            self.bump_expected(Token::Semicolon)?;
         }
         Ok(ast)
     }
@@ -102,11 +104,9 @@ impl<'a> Parser<'a> {
 
     fn parse_block_statment(&mut self) -> Result<BlockStatment, String> {
         let mut block: BlockStatment = vec![];
-        // every block must end  with Semicolon.
         while !self.is_curr_token(Token::Semicolon) {
             block.push(self.parse_statment()?);
         }
-        self.bump_expected(Token::Semicolon)?;
         Ok(block)
     }
 
@@ -160,6 +160,7 @@ impl<'a> Parser<'a> {
         let precedence = self.curr_token.precedence();
         self.bump()?;
         let rhs = self.parse_expression(precedence)?;
+        self.bump()?;
         Ok(Expression::Infix(Box::new(lhs), infix, Box::new(rhs)))
     }
 }
