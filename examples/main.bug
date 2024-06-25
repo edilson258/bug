@@ -1,1 +1,1 @@
-f main -> 69 .write;
+f main -> "Hello, world!" .write;

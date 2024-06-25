@@ -105,7 +105,9 @@ impl Runtime {
                 }
                 Opcode::IIncr(index, constant) => Self::iincr(&mut current_frame, index, constant),
                 Opcode::Bipush(iconst) => current_frame.opstack.push(Object::Int(iconst)),
-                Opcode::Ldc(_) => todo!(),
+                Opcode::Ldc(index) => match program.pool.entries[index] {
+                    PoolEntry::Object(ref object) => current_frame.opstack.push(object.clone()),
+                },
             }
         }
     }
