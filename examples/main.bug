@@ -1,1 +1,5 @@
-f main -> "Hello, world!" .write;
+f sum -> 
+  34 35 + .write;
+
+f main -> 
+  "Hello, world!" .write .sum;

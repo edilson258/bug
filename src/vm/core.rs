@@ -12,28 +12,22 @@ impl Runtime {
     pub fn run(program: Program) {
         let program = program;
         let native_fns = list_builtin_fns();
-        let main_fn = program.fns.iter().find(|func| func.name == "main").unwrap();
+        let main_fn = program.fns.get("main").unwrap();
         let mut framestack: Stack<Frame> = Stack::make();
         let mut current_frame = Frame::make(main_fn.code.clone());
 
-        // Main Loop
-        // Note: All instruction that peform control flow such:
-        // invoke, ireturn, return, jumps, ... must be handled inside of the main loop
-        //
         loop {
             let instr = current_frame.fetch_next_instr();
             match instr {
                 Opcode::IAdd => Self::iadd(&mut current_frame),
                 Opcode::IMul => Self::imul(&mut current_frame),
                 Opcode::IDiv => Self::idiv(&mut current_frame),
-                Opcode::ILdc(index) => {
-                    match program.pool.get_by_index(index) {
-                        PoolEntry::Object(object) => match object {
-                            Object::Int(_) => current_frame.stack_push(object),
-                            _ => panic!("[ildc] expects int"),
-                        },
-                    };
-                }
+                Opcode::ILdc(index) => match program.pool.get_by_index(index) {
+                    PoolEntry::Object(object) => match object {
+                        Object::Int(_) => current_frame.stack_push(object),
+                        _ => panic!("[ildc] expects an int"),
+                    },
+                },
                 Opcode::ILoad(index) => current_frame
                     .opstack
                     .push(current_frame.locals.get_by_index(index)),
@@ -41,9 +35,9 @@ impl Runtime {
                     .locals
                     .store_at(index, current_frame.opstack.pop()),
                 Opcode::Invoke(name) => {
-                    let func = program.fns.iter().find(|func| func.name == name);
-                    if func.is_some() {
-                        let callee = func.unwrap().clone();
+                    let defined_fn = program.fns.get(&name);
+                    if defined_fn.is_some() {
+                        let callee = defined_fn.unwrap().clone();
                         let mut callee_current_frame = Frame::make(callee.code);
 
                         for index in 0..callee.arity {
@@ -55,10 +49,7 @@ impl Runtime {
                         framestack.push(current_frame.clone());
                         current_frame = callee_current_frame
                     } else {
-                        let native_fn = native_fns
-                            .iter()
-                            .find(|native_fn| native_fn.name == name)
-                            .unwrap();
+                        let native_fn = native_fns.get(&name).unwrap();
                         let mut args: Vec<Object> = vec![];
                         for _ in 0..native_fn.prototype.arity {
                             args.push(current_frame.opstack.pop());

@@ -1,7 +1,7 @@
 mod metascope;
 
 use crate::ast::{
-    BlockStatment, Expression, FunctionDeclaration as FnDecl, Literal, Statment, AST,
+    BinaryOp, BlockStatment, Expression, FunctionDeclaration as FnDecl, Literal, Statment, AST,
 };
 use core::fmt;
 use metascope::{MetaFunction, MetaObject, MetaScope};
@@ -126,10 +126,6 @@ impl Analiser {
             )));
         }
 
-        /* @Note:
-         *  The return type is equal to the last block Statment
-         *  because we don't support flow control mechanismis like  ifs and return.
-         */
         let mut last_statment_type = Type::Void;
 
         for statment in block {
@@ -147,8 +143,30 @@ impl Analiser {
         match expression {
             Expression::Literal(literal) => Ok(self.analise_literal_expression(literal)),
             Expression::FunctionCall(fn_call) => self.analyse_function_call(fn_call),
+            Expression::BinaryOp(op) => self.analyse_binop(op),
             _ => todo!(),
         }
+    }
+
+    fn analyse_binop(&mut self, _binop: &BinaryOp) -> Result<Type, AnaliserError> {
+        if self.scope.typestack.len() < 2 {
+            return Err(AnaliserError::arg_error(format!(
+                "Missing operands for `+` op"
+            )));
+        }
+
+        let rhs_type = self.scope.typestack.pop().unwrap();
+        let lhs_type = self.scope.typestack.pop().unwrap();
+
+        if lhs_type != rhs_type {
+            return Err(AnaliserError::type_error(format!(
+                "Operands of `+` must be of same type"
+            )));
+        }
+
+        self.scope.typestack.push(rhs_type);
+
+        Ok(lhs_type)
     }
 
     fn analyse_function_call(&mut self, fn_name: &String) -> Result<Type, AnaliserError> {
@@ -168,7 +186,7 @@ impl Analiser {
 
         if function_object.arity > self.scope.typestack.len() as u8 {
             return Err(AnaliserError::arg_error(format!(
-                "Missing args for function '{}'",
+                "Missing args for '{}' function",
                 fn_name
             )));
         }

@@ -60,8 +60,6 @@ fn main() {
     let mut generator = CodeGenerator::make();
     let program = generator.gen(ast);
 
-    println!("{:#?}", program);
-
     let bin = bincode::serialize(&program).unwrap();
 
     let mut file = fs::File::create("out.bin").unwrap();

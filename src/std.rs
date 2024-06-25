@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::object::Object;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -15,7 +17,6 @@ pub struct BuiltinFnPrototype {
 }
 
 pub struct BuiltinFn {
-    pub name: String,
     pub prototype: BuiltinFnPrototype,
     pub function: fn(Vec<Object>),
 }
@@ -30,18 +31,17 @@ fn write_fn(args: Vec<Object>) {
     }
 }
 
-pub fn list_builtin_fns() -> Vec<BuiltinFn> {
+pub fn list_builtin_fns() -> HashMap<String, BuiltinFn> {
     let write_fn_prototype = BuiltinFnPrototype {
         arity: 1,
         argtypes: vec![],
         return_type: Type::Void,
     };
-
     let write_fn = BuiltinFn {
-        name: "write".to_string(),
         prototype: write_fn_prototype,
         function: write_fn,
     };
-
-    vec![write_fn]
+    let mut fns: HashMap<String, BuiltinFn> = HashMap::new();
+    fns.insert("write".to_string(), write_fn);
+    fns
 }

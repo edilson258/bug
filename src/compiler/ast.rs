@@ -1,5 +1,3 @@
-use core::fmt;
-
 use spider_vm::std::Type;
 
 pub type AST = Vec<Statment>;
@@ -11,10 +9,16 @@ pub enum Literal {
 }
 
 #[derive(Debug)]
+pub enum BinaryOp {
+    Plus,
+}
+
+#[derive(Debug)]
 pub enum Expression {
     Identifier(String),
     Literal(Literal),
     FunctionCall(String),
+    BinaryOp(BinaryOp),
 }
 
 pub type BlockStatment = Vec<Statment>;

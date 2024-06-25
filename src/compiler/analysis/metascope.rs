@@ -21,12 +21,12 @@ impl MetaScope {
     pub fn new() -> Self {
         let mut store: HashMap<String, MetaObject> = HashMap::new();
         let builtins = list_builtin_fns();
-        for builtin in builtins {
+        for (fn_name, b) in builtins {
             store.insert(
-                builtin.name,
+                fn_name,
                 MetaObject::MetaFunction(MetaFunction {
-                    arity: builtin.prototype.arity,
-                    return_type: builtin.prototype.return_type,
+                    arity: b.prototype.arity,
+                    return_type: b.prototype.return_type,
                 }),
             );
         }

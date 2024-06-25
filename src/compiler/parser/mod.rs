@@ -3,7 +3,7 @@ use spider_vm::std::Type;
 use super::ast::{Expression, Literal, Statment, AST};
 use super::lexer::Lexer;
 use super::token::Token;
-use crate::ast::{BlockStatment, FunctionDeclaration};
+use crate::ast::{BinaryOp, BlockStatment, FunctionDeclaration};
 
 pub struct Parser<'a> {
     lexer: &'a mut Lexer<'a>,
@@ -44,24 +44,13 @@ impl<'a> Parser<'a> {
         self.curr_token == token
     }
 
-    /// Will build the AST representing the user program
-    /// and will stop parsing on first error.
-    ///
-    /// # Returns
-    ///
-    /// - `On Success`: AST
-    /// - `On Error`: A string explaining the error reason
-    ///
     pub fn parse(&mut self) -> Result<AST, String> {
-        // Populate self.curr_token & self.next_token
-        // which have Token::EOF value.
         self.bump()?;
         self.bump()?;
         let mut ast: AST = vec![];
         while self.curr_token != Token::Eof {
             let stmt = self.parse_statment()?;
             ast.push(stmt);
-            // every block must end  with Semicolon.
             self.bump_expected(Token::Semicolon)?;
         }
         Ok(ast)
@@ -69,7 +58,7 @@ impl<'a> Parser<'a> {
 
     fn parse_statment(&mut self) -> Result<Statment, String> {
         match self.curr_token {
-            Token::F => self.parse_function_definition(),
+            Token::F => self.parse_function_declaration(),
             _ => match self.parse_expression() {
                 Ok(expression) => Ok(Statment::Expression(expression)),
                 Err(err) => Err(err),
@@ -77,7 +66,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_function_definition(&mut self) -> Result<Statment, String> {
+    fn parse_function_declaration(&mut self) -> Result<Statment, String> {
         self.bump_expected(Token::F)?;
         let name = match self.curr_token {
             Token::Identifier(ref name) => name.clone(),
@@ -114,6 +103,7 @@ impl<'a> Parser<'a> {
             Token::String(ref x) => Ok(Expression::Literal(Literal::String(x.clone()))),
             Token::Identifier(ref identifier) => Ok(Expression::Identifier(identifier.clone())),
             Token::Dot => self.parse_function_call(),
+            Token::Plus => Ok(Expression::BinaryOp(BinaryOp::Plus)),
             _ => return Err(format!("Unexpected expression: {}", self.curr_token)),
         }
     }
