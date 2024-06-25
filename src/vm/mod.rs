@@ -33,6 +33,5 @@ fn main() {
         }
     };
 
-    let mut rt = Runtime::setup(program);
-    rt.run();
+    Runtime::run(program);
 }

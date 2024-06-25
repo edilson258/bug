@@ -17,14 +17,17 @@ pub struct BuiltinFnPrototype {
 pub struct BuiltinFn {
     pub name: String,
     pub prototype: BuiltinFnPrototype,
-    pub function: fn(Object),
+    pub function: fn(Vec<Object>),
 }
 
-fn write_fn(object: Object) {
-    match object {
-        Object::Int(x) => println!("{}", x),
-        _ => todo!(),
-    };
+fn write_fn(args: Vec<Object>) {
+    for object in args {
+        match object {
+            Object::Int(val) => println!("{val}"),
+            Object::String(val) => println!("{val}"),
+            Object::Null => println!("null"),
+        }
+    }
 }
 
 pub fn list_builtin_fns() -> Vec<BuiltinFn> {

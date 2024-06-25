@@ -4,26 +4,14 @@ use crate::stack::Stack;
 use spider_vm::bytecode::{Bytecode, Opcode};
 use spider_vm::object::Object;
 
-/// The max number of local variables a function can hold
-///
-const MAX_LOCALS: usize = 5;
-
 #[derive(Debug, Clone)]
 pub struct Locals {
-    max_locals: usize,
-    inner: [Object; MAX_LOCALS],
+    inner: Vec<Object>,
 }
 
 impl Locals {
-    pub fn make(cap: usize) -> Self {
-        if cap > MAX_LOCALS {
-            eprintln!("[Error]: Locals cap is too high max_locals: {}", MAX_LOCALS);
-            exit(1);
-        }
-        Self {
-            max_locals: cap,
-            inner: Default::default(),
-        }
+    pub fn make() -> Self {
+        Self { inner: vec![] }
     }
 
     pub fn get_by_index(&self, index: usize) -> Object {
@@ -49,13 +37,6 @@ impl Locals {
     }
 
     pub fn store_at(&mut self, index: usize, o: Object) {
-        if index >= self.max_locals {
-            eprintln!(
-                "[Error]: Couldn't store to locals at index {}: OutOfRange",
-                index
-            );
-            exit(1);
-        }
         self.inner[index] = o;
     }
 }
@@ -69,12 +50,12 @@ pub struct Frame {
 }
 
 impl Frame {
-    pub fn make(code: Bytecode, max_locals: usize, max_stack: usize) -> Self {
+    pub fn make(code: Bytecode) -> Self {
         Self {
             pc: 0,
             code,
-            opstack: Stack::make(max_stack),
-            locals: Locals::make(max_locals),
+            opstack: Stack::make(),
+            locals: Locals::make(),
         }
     }
 
@@ -90,16 +71,5 @@ impl Frame {
 
     pub fn stack_pop(&mut self) -> Object {
         self.opstack.pop()
-    }
-}
-
-impl Default for Frame {
-    fn default() -> Self {
-        Frame {
-            pc: 0,
-            code: Bytecode::make(vec![]),
-            locals: Locals::make(0),
-            opstack: Stack::make(0),
-        }
     }
 }
