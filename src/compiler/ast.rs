@@ -1,6 +1,6 @@
 use core::fmt;
 
-use crate::analysis::Type;
+use spider_vm::std::Type;
 
 pub type AST = Vec<Statment>;
 
@@ -11,36 +11,10 @@ pub enum Literal {
 }
 
 #[derive(Debug)]
-pub enum Infix {
-    Plus,
-}
-
-impl fmt::Display for Infix {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Plus => write!(f, "+"),
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct FunctionCall {
-    pub name: String,
-    pub args: Vec<Expression>,
-}
-
-impl FunctionCall {
-    pub fn make(name: String, args: Vec<Expression>) -> Self {
-        Self { name, args }
-    }
-}
-
-#[derive(Debug)]
 pub enum Expression {
     Identifier(String),
     Literal(Literal),
-    Infix(Box<Expression>, Infix, Box<Expression>),
-    FunctionCall(FunctionCall),
+    FunctionCall(String),
 }
 
 pub type BlockStatment = Vec<Statment>;
@@ -66,11 +40,4 @@ impl FunctionDeclaration {
 pub enum Statment {
     Expression(Expression),
     FunctionDeclaration(FunctionDeclaration),
-}
-
-#[derive(Debug, PartialEq, PartialOrd)]
-pub enum Precedence {
-    Lowest = 0,
-    Additive = 1,
-    Call = 2,
 }

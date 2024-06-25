@@ -3,27 +3,8 @@ use serde::{Deserialize, Serialize};
 use crate::object::Object;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct FunctionRef {
-    pub name_index: usize,
-    pub signature_index: usize,
-    pub fn_index: usize, // index within the list of functions
-}
-
-impl FunctionRef {
-    pub fn make(name_index: usize, signature_index: usize, fn_index: usize) -> Self {
-        Self {
-            name_index,
-            signature_index,
-            fn_index,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum PoolEntry {
-    FunctionRef(FunctionRef),
     Object(Object),
-    Utf8(String),
 }
 
 type PoolEntries = Vec<PoolEntry>;

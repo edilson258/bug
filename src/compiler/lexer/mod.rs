@@ -96,6 +96,7 @@ impl<'a> Lexer<'a> {
         let literal = self.chop_while(|x| x.is_alphanumeric() || x == '_');
         // look for keywords
         match literal.as_str() {
+            "f" => Token::F,
             _ => Token::Identifier(literal),
         }
     }

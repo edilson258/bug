@@ -6,6 +6,7 @@ use spider_vm::bytecode::Opcode;
 use spider_vm::object::Object;
 use spider_vm::pool::PoolEntry;
 use spider_vm::program::{Function, Program};
+use spider_vm::std::list_builtin_fns;
 
 pub struct Runtime {
     program: Program,
@@ -26,9 +27,9 @@ impl Runtime {
     ///
     pub fn setup(program: Program) -> Self {
         let main_fn = program.fns[0].clone(); // `main` fn must be in the index 0
-        let main_frame = Frame::make(main_fn.code, main_fn.max_locals, main_fn.max_stack);
+        let main_frame = Frame::make(main_fn.code, main_fn.max_locals, main_fn.max_stack + 1);
 
-        let mut stack = Stack::make(main_fn.max_stack);
+        let mut stack = Stack::make(main_fn.max_stack + 1);
         stack.push(main_frame);
 
         Self { program, stack }
@@ -54,17 +55,28 @@ impl Runtime {
                 Opcode::ILdc(index) => self.ildc(index, &mut frame),
                 Opcode::ILoad(index) => frame.opstack.push(frame.locals.get_by_index(index)),
                 Opcode::IStore(index) => frame.locals.store_at(index, frame.opstack.pop()),
-                Opcode::Invoke(index) => {
-                    let callee = self.fn_loader(index);
-                    let mut callee_frame =
-                        Frame::make(callee.code, callee.max_locals, callee.max_stack);
+                Opcode::Invoke(name) => {
+                    let func = self.program.fns.iter().find(|func| func.name == name);
+                    if func.is_some() {
+                        let callee = func.unwrap().clone();
+                        let mut callee_frame =
+                            Frame::make(callee.code, callee.max_locals, callee.max_stack);
 
-                    for index in 0..callee.arity {
-                        callee_frame.locals.store_at(index, frame.opstack.pop());
+                        for index in 0..callee.arity {
+                            callee_frame.locals.store_at(index, frame.opstack.pop());
+                        }
+
+                        self.stack.push(frame.clone());
+                        frame = callee_frame
+                    } else {
+                        let list = list_builtin_fns();
+                        let native_fn = list
+                            .iter()
+                            .find(|native_fn| native_fn.name == name)
+                            .unwrap();
+                        let arg = frame.opstack.pop();
+                        (native_fn.function)(arg);
                     }
-
-                    self.stack.push(frame.clone());
-                    frame = callee_frame
                 }
                 Opcode::IReturn => {
                     let object_int = frame.stack_pop();
@@ -108,9 +120,6 @@ impl Runtime {
                 Opcode::Ldc(_) => todo!(),
             }
         }
-
-        println!("{:#?}", frame.locals);
-        println!("{:#?}", frame.opstack);
     }
 
     fn ipop_two(&mut self, frame: &mut Frame) -> (i32, i32) {
@@ -157,16 +166,6 @@ impl Runtime {
                 Object::Int(_) => frame.stack_push(object),
                 _ => panic!("[ildc] expects int"),
             },
-            _ => panic!("[ildc] expects int"),
         };
-    }
-
-    fn fn_loader(&self, pool_index: usize) -> Function {
-        match self.program.pool.get_by_index(pool_index) {
-            PoolEntry::FunctionRef(fn_ref) => self.program.load_fn(fn_ref.fn_index),
-            _ => {
-                panic!("fn_loader expects a `FunctionRef` at provided index");
-            }
-        }
     }
 }

@@ -1,24 +1,17 @@
 mod metascope;
 
 use crate::ast::{
-    BlockStatment, Expression, FunctionCall, FunctionDeclaration as FnDecl, Infix, Literal,
-    Statment, AST,
+    BlockStatment, Expression, FunctionDeclaration as FnDecl, Literal, Statment, AST,
 };
 use core::fmt;
 use metascope::{MetaFunction, MetaObject, MetaScope};
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum Type {
-    Integer,
-    String,
-    Void,
-}
+use spider_vm::std::Type;
 
 #[derive(Debug)]
 enum AnaliserErrorKind {
     Type,
     Name,
-    Arguments,
+    Argument,
 }
 
 impl fmt::Display for AnaliserErrorKind {
@@ -26,7 +19,7 @@ impl fmt::Display for AnaliserErrorKind {
         match self {
             Self::Type => write!(f, "[Type Error]"),
             Self::Name => write!(f, "[Name Error]"),
-            Self::Arguments => write!(f, "[Argument Error]"),
+            Self::Argument => write!(f, "[Argument Error]"),
         }
     }
 }
@@ -51,9 +44,9 @@ impl AnaliserError {
         }
     }
 
-    pub fn args_error(msg: String) -> Self {
+    pub fn arg_error(msg: String) -> Self {
         Self {
-            kind: AnaliserErrorKind::Arguments,
+            kind: AnaliserErrorKind::Argument,
             msg,
         }
     }
@@ -119,15 +112,14 @@ impl Analiser {
                 return_type: expected_return_type.clone(),
             }),
         );
-
-        Ok(expected_return_type)
+        Ok(Type::Void)
     }
 
     fn analise_block_statment(
         &mut self,
         block: &BlockStatment,
         expected_type: &Type,
-    ) -> Result<(), AnaliserError> {
+    ) -> Result<Type, AnaliserError> {
         if block.is_empty() && *expected_type != Type::Void {
             return Err(AnaliserError::type_error(format!(
                 "Missing return from non-void block"
@@ -135,8 +127,8 @@ impl Analiser {
         }
 
         /* @Note:
-         * The return type is equal to the last block Statment
-         * because we don't support flow control mechanismis like  ifs and return.
+         *  The return type is equal to the last block Statment
+         *  because we don't support flow control mechanismis like  ifs and return.
          */
         let mut last_statment_type = Type::Void;
 
@@ -148,25 +140,24 @@ impl Analiser {
             return Err(AnaliserError::type_error(format!("Return type miss match")));
         }
 
-        Ok(())
+        Ok(last_statment_type)
     }
 
     fn analise_expression(&mut self, expression: &Expression) -> Result<Type, AnaliserError> {
         match expression {
             Expression::Literal(literal) => Ok(self.analise_literal_expression(literal)),
-            Expression::Infix(lhs, infix, rhs) => self.analise_infix_expression(lhs, infix, rhs),
             Expression::FunctionCall(fn_call) => self.analyse_function_call(fn_call),
             _ => todo!(),
         }
     }
 
-    fn analyse_function_call(&mut self, fn_call: &FunctionCall) -> Result<Type, AnaliserError> {
-        let object = match self.scope.lookup_global(&fn_call.name) {
+    fn analyse_function_call(&mut self, fn_name: &String) -> Result<Type, AnaliserError> {
+        let object = match self.scope.lookup_global(&fn_name) {
             Some(obj) => obj,
             None => {
                 return Err(AnaliserError::name_error(format!(
                     "'{}' is unbound",
-                    fn_call.name
+                    fn_name
                 )))
             }
         };
@@ -175,41 +166,33 @@ impl Analiser {
             MetaObject::MetaFunction(fn_obj) => fn_obj,
         };
 
-        if function_object.arity != fn_call.args.len() as u8 {
-            return Err(AnaliserError::args_error(format!(
-                "'{}' expects {} args but provided {}",
-                fn_call.name,
-                function_object.arity,
-                fn_call.args.len()
+        if function_object.arity > self.scope.typestack.len() as u8 {
+            return Err(AnaliserError::arg_error(format!(
+                "Missing args for function '{}'",
+                fn_name
             )));
         }
 
-        Ok(function_object.return_type.clone())
+        let return_type = function_object.return_type.clone();
+
+        for _ in 0..function_object.arity {
+            self.scope.typestack.pop();
+        }
+
+        self.scope.typestack.push(return_type.clone());
+        Ok(return_type)
     }
 
     fn analise_literal_expression(&mut self, literal: &Literal) -> Type {
         match literal {
-            Literal::Int(_) => Type::Integer,
-            Literal::String(_) => Type::String,
+            Literal::Int(_) => {
+                self.scope.typestack.push(Type::Integer);
+                Type::Integer
+            }
+            Literal::String(_) => {
+                self.scope.typestack.push(Type::String);
+                Type::String
+            }
         }
-    }
-
-    fn analise_infix_expression(
-        &mut self,
-        lhs: &Expression,
-        infix: &Infix,
-        rhs: &Expression,
-    ) -> Result<Type, AnaliserError> {
-        let lhs_type = self.analise_expression(lhs)?;
-        let rhs_type = self.analise_expression(rhs)?;
-
-        if lhs_type != rhs_type {
-            return Err(AnaliserError::type_error(format!(
-                "'{}' operands must be of same type",
-                infix
-            )));
-        }
-
-        Ok(lhs_type)
     }
 }

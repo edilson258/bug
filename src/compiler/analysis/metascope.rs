@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use super::Type;
+use spider_vm::std::list_builtin_fns;
 
 pub struct MetaFunction {
     pub arity: u8,
@@ -12,20 +13,28 @@ pub enum MetaObject {
 }
 
 pub struct MetaScope {
-    store: HashMap<String, MetaObject>,
+    pub store: HashMap<String, MetaObject>,
+    pub typestack: Vec<Type>,
 }
 
 impl MetaScope {
     pub fn new() -> Self {
-        let write_fn = MetaFunction {
-            arity: 1,
-            return_type: Type::Void,
-        };
-
         let mut store: HashMap<String, MetaObject> = HashMap::new();
-        store.insert("write".to_string(), MetaObject::MetaFunction(write_fn));
+        let builtins = list_builtin_fns();
+        for builtin in builtins {
+            store.insert(
+                builtin.name,
+                MetaObject::MetaFunction(MetaFunction {
+                    arity: builtin.prototype.arity,
+                    return_type: builtin.prototype.return_type,
+                }),
+            );
+        }
 
-        Self { store }
+        Self {
+            store,
+            typestack: vec![],
+        }
     }
 
     pub fn insert(&mut self, name: String, object: MetaObject) {

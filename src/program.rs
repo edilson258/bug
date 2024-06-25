@@ -50,7 +50,7 @@ impl Program {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Function {
-    pub fn_pool_ref: usize,
+    pub name: String,
     pub arity: usize,
     pub code: Bytecode,
     pub max_stack: usize,
@@ -59,14 +59,14 @@ pub struct Function {
 
 impl Function {
     pub fn make(
-        fn_pool_ref: usize,
+        name: String,
         arity: usize,
         max_stack: usize,
         max_locals: usize,
         code: Bytecode,
     ) -> Self {
         Self {
-            fn_pool_ref,
+            name,
             arity,
             code,
             max_stack,

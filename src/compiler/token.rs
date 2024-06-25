@@ -1,7 +1,5 @@
 use core::fmt;
 
-use super::ast::Precedence;
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
     Illegal(char),
@@ -19,16 +17,7 @@ pub enum Token {
     Lparen,
     Rparen,
     Semicolon,
-}
-
-impl Token {
-    pub fn precedence(&self) -> Precedence {
-        match self {
-            Token::Lparen => Precedence::Call,
-            Token::Plus => Precedence::Additive,
-            _ => Precedence::Lowest,
-        }
-    }
+    F,
 }
 
 impl fmt::Display for Token {
@@ -46,6 +35,7 @@ impl fmt::Display for Token {
             Self::Rparen => write!(f, ")"),
             Self::Semicolon => write!(f, ";"),
             Self::Minus => write!(f, "-"),
+            Self::F => write!(f, "[Function declaration] f"),
         }
     }
 }

@@ -14,7 +14,7 @@ pub enum Opcode {
     // control flow
     Return,
     IReturn,
-    Invoke(usize),
+    Invoke(String),
 
     // jumps
     Goto(usize),

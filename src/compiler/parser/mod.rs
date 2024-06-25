@@ -1,9 +1,9 @@
-use crate::analysis::Type;
-use crate::ast::{BlockStatment, FunctionCall, FunctionDeclaration};
+use spider_vm::std::Type;
 
-use super::ast::{Expression, Infix, Literal, Precedence, Statment, AST};
+use super::ast::{Expression, Literal, Statment, AST};
 use super::lexer::Lexer;
 use super::token::Token;
+use crate::ast::{BlockStatment, FunctionDeclaration};
 
 pub struct Parser<'a> {
     lexer: &'a mut Lexer<'a>,
@@ -45,6 +45,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Will build the AST representing the user program
+    /// and will stop parsing on first error.
     ///
     /// # Returns
     ///
@@ -68,8 +69,8 @@ impl<'a> Parser<'a> {
 
     fn parse_statment(&mut self) -> Result<Statment, String> {
         match self.curr_token {
-            Token::Dot => self.parse_function_definition(),
-            _ => match self.parse_expression(Precedence::Lowest) {
+            Token::F => self.parse_function_definition(),
+            _ => match self.parse_expression() {
                 Ok(expression) => Ok(Statment::Expression(expression)),
                 Err(err) => Err(err),
             },
@@ -77,16 +78,12 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_function_definition(&mut self) -> Result<Statment, String> {
-        self.bump_expected(Token::Dot)?;
+        self.bump_expected(Token::F)?;
         let name = match self.curr_token {
             Token::Identifier(ref name) => name.clone(),
-            _ => return Err(format!("'.' must follow an identifier")),
+            _ => return Err(format!("'f' must follow an identifier")),
         };
         self.bump()?;
-
-        // @TODO: handle function's params.
-        self.bump_expected(Token::Lparen)?;
-        self.bump_expected(Token::Rparen)?;
 
         let return_type = match self.curr_token {
             Token::Arrow => Type::Void,
@@ -106,61 +103,26 @@ impl<'a> Parser<'a> {
         let mut block: BlockStatment = vec![];
         while !self.is_curr_token(Token::Semicolon) {
             block.push(self.parse_statment()?);
+            self.bump()?;
         }
         Ok(block)
     }
 
-    fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, String> {
-        let mut lhs = match self.curr_token {
-            Token::Int(x) => Expression::Literal(Literal::Int(x)),
-            Token::String(ref x) => Expression::Literal(Literal::String(x.clone())),
-            Token::Identifier(ref identifier) => Expression::Identifier(identifier.clone()),
+    fn parse_expression(&mut self) -> Result<Expression, String> {
+        match self.curr_token {
+            Token::Int(x) => Ok(Expression::Literal(Literal::Int(x))),
+            Token::String(ref x) => Ok(Expression::Literal(Literal::String(x.clone()))),
+            Token::Identifier(ref identifier) => Ok(Expression::Identifier(identifier.clone())),
+            Token::Dot => self.parse_function_call(),
             _ => return Err(format!("Unexpected expression: {}", self.curr_token)),
-        };
-
-        // write("Hello");
-        while precedence < self.next_token.precedence() {
-            match self.next_token {
-                Token::Plus => {
-                    self.bump()?;
-                    lhs = self.parse_infix_expression(lhs)?;
-                }
-                Token::Lparen => {
-                    self.bump()?;
-                    match lhs {
-                        Expression::Identifier(name) => {
-                            lhs = self.parse_function_call(name)?;
-                        }
-                        _ => return Err(format!("'(' must follow an identifier")),
-                    }
-                }
-                _ => return Ok(lhs),
-            }
         }
-
-        Ok(lhs)
     }
 
-    fn parse_function_call(&mut self, fn_name: String) -> Result<Expression, String> {
-        self.bump_expected(Token::Lparen)?;
-        let arg = self.parse_expression(Precedence::Call)?;
-        self.bump()?;
-        self.bump_expected(Token::Rparen)?;
-        Ok(Expression::FunctionCall(FunctionCall::make(
-            fn_name,
-            vec![arg],
-        )))
-    }
-
-    fn parse_infix_expression(&mut self, lhs: Expression) -> Result<Expression, String> {
-        let infix = match self.curr_token {
-            Token::Plus => Infix::Plus,
-            _ => return Err(format!("Unexpected infix operator: {}", self.curr_token)),
-        };
-        let precedence = self.curr_token.precedence();
-        self.bump()?;
-        let rhs = self.parse_expression(precedence)?;
-        self.bump()?;
-        Ok(Expression::Infix(Box::new(lhs), infix, Box::new(rhs)))
+    fn parse_function_call(&mut self) -> Result<Expression, String> {
+        self.bump_expected(Token::Dot)?;
+        match &self.curr_token {
+            Token::Identifier(ref fn_name) => Ok(Expression::FunctionCall(fn_name.clone())),
+            _ => Err(format!("Missing function's name")),
+        }
     }
 }
