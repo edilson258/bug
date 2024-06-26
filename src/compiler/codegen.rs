@@ -5,11 +5,11 @@ use crate::ast::{Expression, FunctionDeclaration, Literal, Statment, AST};
 use spider_vm::bytecode::{Bytecode, Opcode};
 use spider_vm::object::Object;
 use spider_vm::pool::{Pool, PoolEntry};
-use spider_vm::program::{Function, Program};
+use spider_vm::program::{DefinedFn, Program};
 
 pub struct CodeGenerator {
     pool: Pool,
-    fns: HashMap<String, Function>,
+    fns: HashMap<String, DefinedFn>,
 }
 
 impl CodeGenerator {
@@ -43,7 +43,7 @@ impl CodeGenerator {
             code.instrs.extend(self.generate_statement(stmt).instrs)
         }
         code.instrs.push(Opcode::Return);
-        self.fns.insert(fn_decl.name, Function { arity: 0, code });
+        self.fns.insert(fn_decl.name, DefinedFn { arity: 0, code });
         Bytecode::make(vec![])
     }
 

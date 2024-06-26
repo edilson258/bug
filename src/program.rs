@@ -1,6 +1,5 @@
-use std::collections::HashMap;
-
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 use crate::bytecode::Bytecode;
 use crate::pool::Pool;
@@ -8,11 +7,11 @@ use crate::pool::Pool;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Program {
     pub pool: Pool,
-    pub fns: HashMap<String, Function>,
+    pub fns: HashMap<String, DefinedFn>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Function {
+pub struct DefinedFn {
     pub arity: usize,
     pub code: Bytecode,
 }

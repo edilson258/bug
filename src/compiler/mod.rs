@@ -12,7 +12,7 @@ use std::{env, fs};
 
 use utils::read_file;
 
-use crate::analysis::Analiser;
+use crate::analysis::Analyser;
 use crate::codegen::CodeGenerator;
 use crate::lexer::Lexer;
 use crate::parser::Parser;
@@ -46,8 +46,8 @@ fn main() {
         }
     };
 
-    let mut analiser = Analiser::make();
-    match analiser.analise(&mut ast) {
+    let mut analiser = Analyser::make();
+    match analiser.analyse(&mut ast) {
         Ok(()) => {}
         Err(errors) => {
             for err in errors {

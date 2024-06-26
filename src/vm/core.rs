@@ -4,14 +4,14 @@ use spider_vm::bytecode::Opcode;
 use spider_vm::object::Object;
 use spider_vm::pool::PoolEntry;
 use spider_vm::program::Program;
-use spider_vm::std::list_builtin_fns;
+use spider_vm::stdlib::list_native_fns;
 
 pub struct Runtime {}
 
 impl Runtime {
     pub fn run(program: Program) {
         let program = program;
-        let native_fns = list_builtin_fns();
+        let native_fns = list_native_fns();
         let main_fn = program.fns.get("main").unwrap();
         let mut framestack: Stack<Frame> = Stack::make();
         let mut current_frame = Frame::make(main_fn.code.clone());
@@ -54,7 +54,9 @@ impl Runtime {
                         for _ in 0..native_fn.prototype.arity {
                             args.push(current_frame.opstack.pop());
                         }
-                        (native_fn.function)(args);
+                        if let Some(return_val) = (native_fn.function)(args) {
+                            current_frame.opstack.push(return_val);
+                        }
                     }
                 }
                 Opcode::IReturn => {

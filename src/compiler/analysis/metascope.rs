@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use super::Type;
-use spider_vm::std::list_builtin_fns;
+use spider_vm::stdlib::list_native_fns;
 
 pub struct MetaFunction {
     pub arity: u8,
@@ -20,7 +20,7 @@ pub struct MetaScope {
 impl MetaScope {
     pub fn new() -> Self {
         let mut store: HashMap<String, MetaObject> = HashMap::new();
-        let builtins = list_builtin_fns();
+        let builtins = list_native_fns();
         for (fn_name, b) in builtins {
             store.insert(
                 fn_name,

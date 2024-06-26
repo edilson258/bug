@@ -1,4 +1,4 @@
-use spider_vm::std::Type;
+use spider_vm::stdlib::Type;
 
 use super::ast::{Expression, Literal, Statment, AST};
 use super::lexer::Lexer;
@@ -47,16 +47,22 @@ impl<'a> Parser<'a> {
     pub fn parse(&mut self) -> Result<AST, String> {
         self.bump()?;
         self.bump()?;
+
         let mut ast: AST = vec![];
+
         while self.curr_token != Token::Eof {
-            let stmt = self.parse_statment()?;
+            let stmt = self.parse_statement()?;
             ast.push(stmt);
-            self.bump_expected(Token::Semicolon)?;
+            self.bump()?;
+            if self.curr_token == Token::Semicolon {
+                self.bump()?;
+            }
         }
+
         Ok(ast)
     }
 
-    fn parse_statment(&mut self) -> Result<Statment, String> {
+    fn parse_statement(&mut self) -> Result<Statment, String> {
         match self.curr_token {
             Token::F => self.parse_function_declaration(),
             _ => match self.parse_expression() {
@@ -80,7 +86,7 @@ impl<'a> Parser<'a> {
         };
         self.bump()?;
 
-        let body = self.parse_block_statment()?;
+        let body = self.parse_block_statement()?;
         Ok(Statment::FunctionDeclaration(FunctionDeclaration::make(
             name,
             return_type,
@@ -88,10 +94,10 @@ impl<'a> Parser<'a> {
         )))
     }
 
-    fn parse_block_statment(&mut self) -> Result<BlockStatment, String> {
+    fn parse_block_statement(&mut self) -> Result<BlockStatment, String> {
         let mut block: BlockStatment = vec![];
         while !self.is_curr_token(Token::Semicolon) {
-            block.push(self.parse_statment()?);
+            block.push(self.parse_statement()?);
             self.bump()?;
         }
         Ok(block)

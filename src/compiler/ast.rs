@@ -1,4 +1,4 @@
-use spider_vm::std::Type;
+use spider_vm::stdlib::Type;
 
 pub type AST = Vec<Statment>;
 
