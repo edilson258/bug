@@ -1,3 +1,4 @@
+use core::fmt;
 use std::collections::HashMap;
 
 use crate::object::Object;
@@ -7,6 +8,16 @@ pub enum Type {
     Integer,
     String,
     Void,
+}
+
+impl fmt::Display for Type {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Void => write!(f, "void"),
+            Self::Integer => write!(f, "int"),
+            Self::String => write!(f, "str"),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

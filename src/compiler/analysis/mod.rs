@@ -1,224 +1,219 @@
-mod metascope;
+mod context;
+mod errorhandler;
+
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use crate::ast::*;
-use core::fmt;
-use metascope::{MetaFunction, MetaObject, MetaScope};
-use spider_vm::stdlib::Type;
-
-#[derive(Debug)]
-enum AnalyserErrorKind {
-    Type,
-    Name,
-    Argument,
-}
-
-impl fmt::Display for AnalyserErrorKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Type => write!(f, "[Type Error]"),
-            Self::Name => write!(f, "[Name Error]"),
-            Self::Argument => write!(f, "[Argument Error]"),
-        }
-    }
-}
-
-pub struct AnalyserError {
-    kind: AnalyserErrorKind,
-    msg: String,
-}
-
-impl AnalyserError {
-    pub fn type_error(msg: String) -> Self {
-        Self {
-            kind: AnalyserErrorKind::Type,
-            msg,
-        }
-    }
-
-    pub fn name_error(msg: String) -> Self {
-        Self {
-            kind: AnalyserErrorKind::Name,
-            msg,
-        }
-    }
-
-    pub fn arg_error(msg: String) -> Self {
-        Self {
-            kind: AnalyserErrorKind::Argument,
-            msg,
-        }
-    }
-}
-
-impl fmt::Display for AnalyserError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}: {}", self.kind, self.msg)
-    }
-}
-
-pub type AnalyserErrors = Vec<AnalyserError>;
+use context::{Context, ContextType, Object};
+use errorhandler::{AnalyserError, AnalyserErrors};
+use spider_vm::stdlib::{FnPrototype, Type};
 
 pub struct Analyser {
-    scope: MetaScope,
+    context: Rc<RefCell<Context>>,
+    typestack: Vec<Type>,
 }
 
 impl Analyser {
     pub fn make() -> Self {
         Self {
-            scope: MetaScope::new(),
+            context: Rc::new(RefCell::new(Context::make_global())),
+            typestack: vec![],
         }
     }
 
-    pub fn analyse(&mut self, ast: &AST) -> Result<(), AnalyserErrors> {
+    pub fn analyse(&mut self, ast: &mut AST) -> Result<(), AnalyserErrors> {
         let mut errors: AnalyserErrors = vec![];
         for stmt in ast {
-            self.analyse_statment(stmt)
+            self.analyse_statement(stmt)
                 .map_err(|err| errors.push(err))
                 .ok();
         }
-        let main_fn = self.scope.lookup_global("main");
-        if main_fn.is_none() {
-            errors.push(AnalyserError::name_error(format!(
-                "Missing 'main' function"
-            )));
-        } else {
-            match main_fn.unwrap() {
-                MetaObject::MetaFunction(_) => {}
-            };
-        }
+
         if errors.is_empty() {
-            return Ok(());
+            Ok(())
+        } else {
+            Err(errors)
         }
-        Err(errors)
     }
 
-    fn analyse_statment(&mut self, stmt: &Statment) -> Result<Type, AnalyserError> {
+    fn analyse_statement(&mut self, stmt: &mut Statment) -> Result<(), AnalyserError> {
         match stmt {
             Statment::FunctionDeclaration(fn_decl) => self.analyse_function_declaration(fn_decl),
-            Statment::Expression(expr) => self.analyse_expression(expr),
+            Statment::Expression(expression) => self.analyse_expression(expression),
         }
     }
 
     fn analyse_function_declaration(
         &mut self,
-        fn_decl: &FunctionDeclaration,
-    ) -> Result<Type, AnalyserError> {
-        if self.scope.exists_in_current(&fn_decl.name) {
+        fn_decl: &mut FunctionDeclaration,
+    ) -> Result<(), AnalyserError> {
+        if self.context.borrow().type_ != ContextType::Global {
+            return Err(AnalyserError::illegal_decl(format!(
+                "Functions must be only declared in global scope"
+            )));
+        }
+
+        if self.context.borrow().is_declared(&fn_decl.name) {
             return Err(AnalyserError::name_error(format!(
                 "'{}' is already bound",
-                fn_decl.name
+                &fn_decl.name
             )));
         }
 
-        let expected_return_type = fn_decl.return_type.clone();
-        self.analyse_block_statment(&fn_decl.body, &expected_return_type)?;
-
-        self.scope.insert(
+        self.context.borrow_mut().declare(
             fn_decl.name.clone(),
-            MetaObject::MetaFunction(MetaFunction {
+            Object::FnPrototype(FnPrototype {
                 arity: 0,
-                return_type: expected_return_type.clone(),
+                argtypes: vec![],
+                return_type: fn_decl.return_type.clone(),
             }),
         );
-        Ok(Type::Void)
+
+        let global_context = Rc::clone(&self.context);
+        let fn_context = Rc::new(RefCell::new(Context::make(
+            ContextType::Function,
+            Rc::clone(&global_context),
+        )));
+        self.context = fn_context;
+
+        for stmt in &mut fn_decl.body {
+            if let Err(err) = self.analyse_statement(stmt) {
+                self.typestack.clear();
+                self.context = global_context;
+                return Err(err);
+            }
+        }
+
+        if self.typestack.is_empty() {
+            if fn_decl.return_type != Type::Void {
+                self.typestack.clear();
+                self.context = global_context;
+                return Err(AnalyserError::type_error(format!(
+                    "Missing return val for a non-void function '{}'",
+                    &fn_decl.name
+                )));
+            }
+        } else {
+            if self.typestack.len() > 1 {
+                self.typestack.clear();
+                self.context = global_context;
+                return Err(AnalyserError::unhandled_stack(format!(
+                    "Unhandled stack values for function '{}'",
+                    &fn_decl.name
+                )));
+            }
+
+            let provided_type = self.typestack.pop().unwrap();
+
+            if provided_type != fn_decl.return_type {
+                self.typestack.clear();
+                self.context = global_context;
+                return Err(AnalyserError::type_error(format!(
+                    "Function '{}' expects return type {} but provided {}",
+                    &fn_decl.name, fn_decl.return_type, provided_type
+                )));
+            }
+        }
+
+        self.context = global_context;
+        Ok(())
     }
 
-    fn analyse_block_statment(
-        &mut self,
-        block: &BlockStatment,
-        expected_type: &Type,
-    ) -> Result<Type, AnalyserError> {
-        if block.is_empty() && *expected_type != Type::Void {
-            return Err(AnalyserError::type_error(format!(
-                "Missing return from non-void block"
+    fn analyse_expression(&mut self, expression: &mut Expression) -> Result<(), AnalyserError> {
+        if self.context.borrow().type_ != ContextType::Function {
+            return Err(AnalyserError::out_fn_expr(format!(
+                "Expressions must be inside of functions"
             )));
         }
 
-        let mut last_statment_type = Type::Void;
-
-        for statment in block {
-            last_statment_type = self.analyse_statment(statment)?;
-        }
-
-        if last_statment_type != *expected_type {
-            return Err(AnalyserError::type_error(format!("Return type miss match")));
-        }
-
-        Ok(last_statment_type)
-    }
-
-    fn analyse_expression(&mut self, expression: &Expression) -> Result<Type, AnalyserError> {
         match expression {
-            Expression::Literal(literal) => Ok(self.analyse_literal_expression(literal)),
-            Expression::FunctionCall(fn_call) => self.analyse_function_call(fn_call),
-            Expression::BinaryOp(op) => self.analyse_binop(op),
+            Expression::Literal(literal) => self.analyse_literal_expression(literal),
+            Expression::FunctionCall(fn_name) => self.analyse_function_call(fn_name),
+            Expression::BinaryOp(binop) => self.analyse_binop(binop),
             _ => todo!(),
         }
     }
 
-    fn analyse_binop(&mut self, _binop: &BinaryOp) -> Result<Type, AnalyserError> {
-        if self.scope.typestack.len() < 2 {
-            return Err(AnalyserError::arg_error(format!(
-                "Missing operands for `+` op"
+    fn analyse_binop(&mut self, binop: &mut BinaryOp) -> Result<(), AnalyserError> {
+        if self.typestack.len() > 2 {
+            return Err(AnalyserError::unhandled_stack(format!(
+                "Must handle stack values before '{:#?}' operation",
+                binop
             )));
         }
 
-        let rhs_type = self.scope.typestack.pop().unwrap();
-        let lhs_type = self.scope.typestack.pop().unwrap();
+        if self.typestack.len() < 2 {
+            return Err(AnalyserError::unhandled_stack(format!(
+                "Missing operands for '{:#?}' operation",
+                binop
+            )));
+        }
 
-        if lhs_type != rhs_type {
+        let rhs = self.typestack.pop().unwrap();
+        let lhs = self.typestack.pop().unwrap();
+
+        if rhs != lhs {
             return Err(AnalyserError::type_error(format!(
-                "Operands of `+` must be of same type"
+                "Operands of '{:#?}' operation must be of same type, but provided '{}' and '{}'",
+                binop, lhs, rhs
             )));
         }
 
-        self.scope.typestack.push(rhs_type);
+        match binop {
+            BinaryOp::Plus => match lhs {
+                Type::Integer => self.typestack.push(lhs),
+                _ => {
+                    return Err(AnalyserError::type_error(format!(
+                        "'{:#?}' operation not supported for '{}' type",
+                        binop, lhs
+                    )))
+                }
+            },
+        }
 
-        Ok(lhs_type)
+        Ok(())
     }
 
-    fn analyse_function_call(&mut self, fn_name: &String) -> Result<Type, AnalyserError> {
-        let object = match self.scope.lookup_global(&fn_name) {
-            Some(obj) => obj,
-            None => {
-                return Err(AnalyserError::name_error(format!(
-                    "'{}' is unbound",
-                    fn_name
-                )))
-            }
+    fn analyse_literal_expression(&mut self, literal: &mut Literal) -> Result<(), AnalyserError> {
+        match literal {
+            Literal::Int(_) => self.typestack.push(Type::Integer),
+            Literal::String(_) => self.typestack.push(Type::String),
+        }
+        Ok(())
+    }
+
+    fn analyse_function_call(&mut self, fn_name: &mut String) -> Result<(), AnalyserError> {
+        let func = self.context.borrow().lookup(&fn_name);
+        if func.is_none() {
+            return Err(AnalyserError::name_error(format!(
+                "'{}' is unbound",
+                fn_name
+            )));
+        }
+        let prototype = match func.unwrap() {
+            Object::FnPrototype(prototype) => prototype,
         };
 
-        let function_object = match object {
-            MetaObject::MetaFunction(fn_obj) => fn_obj,
-        };
-
-        if function_object.arity > self.scope.typestack.len() as u8 {
+        if (self.typestack.len() as u8) < prototype.arity {
             return Err(AnalyserError::arg_error(format!(
-                "Missing args for '{}' function",
+                "Missing arguments for function '{}'",
                 fn_name
             )));
         }
 
-        let return_type = function_object.return_type.clone();
-
-        for _ in 0..function_object.arity {
-            self.scope.typestack.pop();
+        if (self.typestack.len() as u8) > prototype.arity {
+            return Err(AnalyserError::unhandled_stack(format!(
+                "Unhandled stack values calling '{}'",
+                fn_name
+            )));
         }
 
-        self.scope.typestack.push(return_type.clone());
-        Ok(return_type)
-    }
-
-    fn analyse_literal_expression(&mut self, literal: &Literal) -> Type {
-        match literal {
-            Literal::Int(_) => {
-                self.scope.typestack.push(Type::Integer);
-                Type::Integer
-            }
-            Literal::String(_) => {
-                self.scope.typestack.push(Type::String);
-                Type::String
-            }
+        self.typestack.clear();
+        if prototype.return_type != Type::Void {
+            self.typestack.push(prototype.return_type.clone());
         }
+
+        Ok(())
     }
 }
