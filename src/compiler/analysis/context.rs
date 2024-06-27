@@ -2,11 +2,12 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use spider_vm::stdlib::{list_native_fns, FnPrototype};
+use spider_vm::stdlib::{list_native_fns, FnPrototype, Type};
 
 #[derive(Debug, Clone)]
 pub enum Object {
     FnPrototype(FnPrototype),
+    VarType(Type),
 }
 
 #[derive(Debug, PartialEq)]

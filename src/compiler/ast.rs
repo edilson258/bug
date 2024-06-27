@@ -10,7 +10,7 @@ pub enum Literal {
 
 #[derive(Debug)]
 pub enum BinaryOp {
-    Plus,
+    Plus(Option<Type>),
 }
 
 #[derive(Debug)]
@@ -24,16 +24,26 @@ pub enum Expression {
 pub type BlockStatment = Vec<Statment>;
 
 #[derive(Debug)]
+pub struct FnParam {
+    pub name: String,
+    pub type_: Type,
+}
+
+pub type FnParams = Vec<FnParam>;
+
+#[derive(Debug)]
 pub struct FunctionDeclaration {
     pub name: String,
+    pub params: FnParams,
     pub return_type: Type,
     pub body: BlockStatment,
 }
 
 impl FunctionDeclaration {
-    pub fn make(name: String, return_type: Type, body: BlockStatment) -> Self {
+    pub fn make(name: String, params: FnParams, return_type: Type, body: BlockStatment) -> Self {
         Self {
             name,
+            params,
             return_type,
             body,
         }

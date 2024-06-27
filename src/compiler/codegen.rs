@@ -1,15 +1,28 @@
 use std::collections::HashMap;
 
-use crate::ast::{Expression, FunctionDeclaration, Literal, Statment, AST};
+use crate::ast::{BinaryOp, Expression, FunctionDeclaration, Literal, Statment, AST};
 
 use spider_vm::bytecode::{Bytecode, Opcode};
 use spider_vm::object::Object;
 use spider_vm::pool::{Pool, PoolEntry};
 use spider_vm::program::{DefinedFn, Program};
+use spider_vm::stdlib::Type;
+
+struct Local {
+    index: usize,
+    type_: Type,
+}
+
+impl Local {
+    fn make(index: usize, type_: Type) -> Self {
+        Self { index, type_ }
+    }
+}
 
 pub struct CodeGenerator {
     pool: Pool,
     fns: HashMap<String, DefinedFn>,
+    locals: HashMap<String, Local>,
 }
 
 impl CodeGenerator {
@@ -17,6 +30,7 @@ impl CodeGenerator {
         Self {
             pool: Pool::make(),
             fns: HashMap::new(),
+            locals: HashMap::new(),
         }
     }
 
@@ -39,11 +53,28 @@ impl CodeGenerator {
 
     fn generate_function_declaration(&mut self, fn_decl: FunctionDeclaration) -> Bytecode {
         let mut code = Bytecode::make(vec![]);
+        let arity = fn_decl.params.len();
+        for (i, p) in fn_decl.params.into_iter().enumerate() {
+            self.locals.insert(p.name, Local::make(i, p.type_));
+        }
         for stmt in fn_decl.body {
             code.instrs.extend(self.generate_statement(stmt).instrs)
         }
-        code.instrs.push(Opcode::Return);
-        self.fns.insert(fn_decl.name, DefinedFn { arity: 0, code });
+
+        match fn_decl.return_type {
+            Type::Integer => code.instrs.push(Opcode::IReturn),
+            _ => code.instrs.push(Opcode::Return),
+        }
+
+        self.fns.insert(
+            fn_decl.name,
+            DefinedFn {
+                arity,
+                code,
+                max_locals: arity,
+            },
+        );
+        self.locals.clear();
         Bytecode::make(vec![])
     }
 
@@ -51,14 +82,32 @@ impl CodeGenerator {
         match expression {
             Expression::Literal(literal) => self.generate_literal(literal),
             Expression::FunctionCall(fn_name) => self.generate_function_call(fn_name),
-            Expression::BinaryOp(_) => self.geneate_binop(),
-            _ => todo!(),
+            Expression::BinaryOp(binop) => self.generate_binop(binop),
+            Expression::Identifier(ident) => self.generate_identifier(ident),
         }
     }
 
-    fn geneate_binop(&mut self) -> Bytecode {
+    fn generate_identifier(&mut self, ident: String) -> Bytecode {
         let mut bytecode = Bytecode::make(vec![]);
-        bytecode.instrs.push(Opcode::IAdd);
+        let local = self
+            .locals
+            .get(&ident)
+            .expect(&format!("Expected '{}' to a local", &ident));
+        match local.type_ {
+            Type::Integer => bytecode.instrs.push(Opcode::ILoad(local.index)),
+            _ => unreachable!(),
+        };
+        bytecode
+    }
+
+    fn generate_binop(&mut self, binop: BinaryOp) -> Bytecode {
+        let mut bytecode = Bytecode::make(vec![]);
+        match binop {
+            BinaryOp::Plus(type_) => match type_.unwrap() {
+                Type::Integer => bytecode.instrs.push(Opcode::IAdd),
+                _ => unreachable!(),
+            },
+        }
         bytecode
     }
 

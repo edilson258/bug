@@ -57,6 +57,7 @@ impl<'a> Lexer<'a> {
             '(' => Some(Token::Lparen),
             ')' => Some(Token::Rparen),
             ';' => Some(Token::Semicolon),
+            ',' => Some(Token::Comma),
             '.' => Some(Token::Dot),
             '-' => {
                 if self.next_char_is('>') {
@@ -97,6 +98,8 @@ impl<'a> Lexer<'a> {
         // look for keywords
         match literal.as_str() {
             "f" => Token::F,
+            "int" => Token::TypeInteger,
+            "str" => Token::TypeString,
             _ => Token::Identifier(literal),
         }
     }

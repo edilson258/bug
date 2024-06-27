@@ -1,6 +1,6 @@
 use spider_vm::stdlib::Type;
 
-use super::ast::{Expression, Literal, Statment, AST};
+use super::ast::{Expression, FnParam, FnParams, Literal, Statment, AST};
 use super::lexer::Lexer;
 use super::token::Token;
 use crate::ast::{BinaryOp, BlockStatment, FunctionDeclaration};
@@ -80,18 +80,81 @@ impl<'a> Parser<'a> {
         };
         self.bump()?;
 
-        let return_type = match self.curr_token {
-            Token::Arrow => Type::Void,
-            _ => todo!(),
-        };
-        self.bump()?;
+        let params: FnParams = self.parse_function_params()?;
+        let return_type = self.parse_function_return_type()?;
+
+        self.bump_expected(Token::Arrow)?;
 
         let body = self.parse_block_statement()?;
+
         Ok(Statment::FunctionDeclaration(FunctionDeclaration::make(
             name,
+            params,
             return_type,
             body,
         )))
+    }
+
+    fn parse_function_return_type(&mut self) -> Result<Type, String> {
+        let type_ = match self.curr_token {
+            Token::Arrow => Type::Void,
+            Token::TypeInteger => Type::Integer,
+            Token::TypeString => Type::String,
+            _ => {
+                return Err(format!(
+                    "Expected return type annotation, but provided '{}'",
+                    self.curr_token
+                ))
+            }
+        };
+
+        if self.curr_token != Token::Arrow {
+            self.bump()?;
+        }
+
+        Ok(type_)
+    }
+
+    fn parse_function_params(&mut self) -> Result<FnParams, String> {
+        let mut params: FnParams = vec![];
+        if self.curr_token == Token::Arrow {
+            return Ok(params);
+        }
+        self.bump_expected(Token::Lparen)?;
+        while self.curr_token != Token::Rparen {
+            let param_type = match self.curr_token {
+                Token::TypeString => Type::String,
+                Token::TypeInteger => Type::Integer,
+                _ => {
+                    return Err(format!(
+                        "Expected param type, but provided '{}'",
+                        self.curr_token
+                    ))
+                }
+            };
+            self.bump()?;
+            let param_name = match self.curr_token {
+                Token::Identifier(ref name) => name.clone(),
+                _ => {
+                    return Err(format!(
+                        "Expected param name, but provided '{}'",
+                        self.curr_token
+                    ))
+                }
+            };
+            self.bump()?;
+            params.push(FnParam {
+                name: param_name,
+                type_: param_type,
+            });
+            match self.curr_token {
+                Token::Rparen => break,
+                Token::Comma => self.bump()?,
+                _ => return Err(format!("Function params must be separated by ','")),
+            };
+        }
+        self.bump_expected(Token::Rparen)?;
+        Ok(params)
     }
 
     fn parse_block_statement(&mut self) -> Result<BlockStatment, String> {
@@ -109,7 +172,7 @@ impl<'a> Parser<'a> {
             Token::String(ref x) => Ok(Expression::Literal(Literal::String(x.clone()))),
             Token::Identifier(ref identifier) => Ok(Expression::Identifier(identifier.clone())),
             Token::Dot => self.parse_function_call(),
-            Token::Plus => Ok(Expression::BinaryOp(BinaryOp::Plus)),
+            Token::Plus => Ok(Expression::BinaryOp(BinaryOp::Plus(None))),
             _ => return Err(format!("Unexpected expression: {}", self.curr_token)),
         }
     }

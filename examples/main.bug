@@ -1,5 +1,2 @@
-f sum -> 
-  34 35 + .write;
-
-f main -> 
-  "Hello, world!" .write .sum;
+f sum(int x, int y) int -> x y +;
+f main -> 34 35 .sum .write;

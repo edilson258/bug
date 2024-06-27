@@ -14,4 +14,5 @@ pub struct Program {
 pub struct DefinedFn {
     pub arity: usize,
     pub code: Bytecode,
+    pub max_locals: usize,
 }

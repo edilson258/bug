@@ -14,10 +14,14 @@ pub enum Token {
 
     Dot,
     Arrow,
+    Comma,
     Lparen,
     Rparen,
     Semicolon,
     F,
+
+    TypeInteger,
+    TypeString,
 }
 
 impl fmt::Display for Token {
@@ -36,6 +40,9 @@ impl fmt::Display for Token {
             Self::Semicolon => write!(f, ";"),
             Self::Minus => write!(f, "-"),
             Self::F => write!(f, "[Function declaration] f"),
+            Self::TypeInteger => write!(f, "int"),
+            Self::TypeString => write!(f, "str"),
+            Self::Comma => write!(f, ","),
         }
     }
 }

@@ -14,7 +14,7 @@ impl Runtime {
         let native_fns = list_native_fns();
         let main_fn = program.fns.get("main").unwrap();
         let mut framestack: Stack<Frame> = Stack::make();
-        let mut current_frame = Frame::make(main_fn.code.clone());
+        let mut current_frame = Frame::make(main_fn.code.clone(), main_fn.max_locals);
 
         loop {
             let instr = current_frame.fetch_next_instr();
@@ -38,7 +38,7 @@ impl Runtime {
                     let defined_fn = program.fns.get(&name);
                     if defined_fn.is_some() {
                         let callee = defined_fn.unwrap().clone();
-                        let mut callee_current_frame = Frame::make(callee.code);
+                        let mut callee_current_frame = Frame::make(callee.code, callee.max_locals);
 
                         for index in 0..callee.arity {
                             callee_current_frame

@@ -30,10 +30,26 @@ impl Analyser {
                 .ok();
         }
 
+        if !self.has_main_fn() {
+            errors.push(AnalyserError::name_error(format!(
+                "Missing 'main' function"
+            )));
+        }
+
         if errors.is_empty() {
             Ok(())
         } else {
             Err(errors)
+        }
+    }
+
+    fn has_main_fn(&self) -> bool {
+        match self.context.borrow().lookup("main") {
+            Some(obj) => match obj {
+                Object::FnPrototype(_) => true,
+                _ => false,
+            },
+            _ => false,
         }
     }
 
@@ -64,8 +80,12 @@ impl Analyser {
         self.context.borrow_mut().declare(
             fn_decl.name.clone(),
             Object::FnPrototype(FnPrototype {
-                arity: 0,
-                argtypes: vec![],
+                arity: fn_decl.params.len() as u8,
+                argtypes: fn_decl
+                    .params
+                    .iter()
+                    .map(|param| param.type_.clone())
+                    .collect(),
                 return_type: fn_decl.return_type.clone(),
             }),
         );
@@ -76,6 +96,12 @@ impl Analyser {
             Rc::clone(&global_context),
         )));
         self.context = fn_context;
+
+        for param in &fn_decl.params {
+            self.context
+                .borrow_mut()
+                .declare(param.name.clone(), Object::VarType(param.type_.clone()))
+        }
 
         for stmt in &mut fn_decl.body {
             if let Err(err) = self.analyse_statement(stmt) {
@@ -131,7 +157,17 @@ impl Analyser {
             Expression::Literal(literal) => self.analyse_literal_expression(literal),
             Expression::FunctionCall(fn_name) => self.analyse_function_call(fn_name),
             Expression::BinaryOp(binop) => self.analyse_binop(binop),
-            _ => todo!(),
+            Expression::Identifier(ident) => {
+                let variable = self.context.borrow().lookup(&ident);
+                if variable.is_none() {
+                    return Err(AnalyserError::name_error(format!("'{}' is unbound", ident)));
+                }
+                match variable.unwrap() {
+                    Object::FnPrototype(_) => todo!(),
+                    Object::VarType(type_) => self.typestack.push(type_),
+                }
+                Ok(())
+            }
         }
     }
 
@@ -161,8 +197,11 @@ impl Analyser {
         }
 
         match binop {
-            BinaryOp::Plus => match lhs {
-                Type::Integer => self.typestack.push(lhs),
+            BinaryOp::Plus(type_) => match lhs {
+                Type::Integer => {
+                    *type_ = Some(Type::Integer);
+                    self.typestack.push(lhs)
+                }
                 _ => {
                     return Err(AnalyserError::type_error(format!(
                         "'{:#?}' operation not supported for '{}' type",
@@ -193,6 +232,12 @@ impl Analyser {
         }
         let prototype = match func.unwrap() {
             Object::FnPrototype(prototype) => prototype,
+            _ => {
+                return Err(AnalyserError::type_error(format!(
+                    "'{}' is not callable",
+                    fn_name
+                )))
+            }
         };
 
         if (self.typestack.len() as u8) < prototype.arity {

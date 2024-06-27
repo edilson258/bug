@@ -10,8 +10,12 @@ pub struct Locals {
 }
 
 impl Locals {
-    pub fn make() -> Self {
-        Self { inner: vec![] }
+    pub fn make(max_locals: usize) -> Self {
+        let mut inner: Vec<Object> = Vec::with_capacity(max_locals);
+        for _ in 0..max_locals {
+            inner.push(Object::Int(0)) // init locals with zeros
+        }
+        Self { inner }
     }
 
     pub fn get_by_index(&self, index: usize) -> Object {
@@ -50,12 +54,12 @@ pub struct Frame {
 }
 
 impl Frame {
-    pub fn make(code: Bytecode) -> Self {
+    pub fn make(code: Bytecode, max_locals: usize) -> Self {
         Self {
             pc: 0,
             code,
             opstack: Stack::make(),
-            locals: Locals::make(),
+            locals: Locals::make(max_locals),
         }
     }
 
