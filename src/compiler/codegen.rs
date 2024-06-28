@@ -1,12 +1,31 @@
 use std::collections::HashMap;
 
-use crate::ast::{BinaryOp, Expression, FunctionDeclaration, Literal, Statment, AST};
+use crate::ast::*;
 
 use spider_vm::bytecode::{Bytecode, Opcode};
 use spider_vm::object::Object;
 use spider_vm::pool::{Pool, PoolEntry};
 use spider_vm::program::{DefinedFn, Program};
 use spider_vm::stdlib::Type;
+
+struct Context {
+    bytecode: Bytecode,
+    locals: HashMap<String, Local>,
+}
+
+impl Context {
+    pub fn make() -> Self {
+        Self {
+            bytecode: Bytecode::make(vec![]),
+            locals: HashMap::new(),
+        }
+    }
+
+    pub fn reset(&mut self) {
+        self.bytecode.instrs.clear();
+        self.locals.clear();
+    }
+}
 
 struct Local {
     index: usize,
@@ -22,7 +41,7 @@ impl Local {
 pub struct CodeGenerator {
     pool: Pool,
     fns: HashMap<String, DefinedFn>,
-    locals: HashMap<String, Local>,
+    context: Context,
 }
 
 impl CodeGenerator {
@@ -30,7 +49,7 @@ impl CodeGenerator {
         Self {
             pool: Pool::make(),
             fns: HashMap::new(),
-            locals: HashMap::new(),
+            context: Context::make(),
         }
     }
 
@@ -44,41 +63,61 @@ impl CodeGenerator {
         }
     }
 
-    fn generate_statement(&mut self, stmt: Statment) -> Bytecode {
+    fn generate_statement(&mut self, stmt: Statment) {
         match stmt {
             Statment::Expression(expr) => self.generate_expression(expr),
             Statment::FunctionDeclaration(fn_decl) => self.generate_function_declaration(fn_decl),
+            Statment::If(block) => self.generate_if_statement(block),
+            Statment::Return(type_) => self.generate_return_statement(type_.unwrap()),
         }
     }
 
-    fn generate_function_declaration(&mut self, fn_decl: FunctionDeclaration) -> Bytecode {
-        let mut code = Bytecode::make(vec![]);
+    fn generate_if_statement(&mut self, block: BlockStatment) {
+        // Adding "No operation" as placeholder to substitute later with a "JumpIfFalse" op
+        let nop_index = self.context.bytecode.instrs.len();
+        self.context.bytecode.push(Opcode::Nop);
+
+        for stmt in block {
+            self.generate_statement(stmt);
+        }
+        let after_if_block = self.context.bytecode.instrs.len();
+        self.context.bytecode.instrs[nop_index] = Opcode::JumpIfFalse(after_if_block);
+    }
+
+    fn generate_return_statement(&mut self, type_: Type) {
+        match type_ {
+            Type::Void => self.context.bytecode.push(Opcode::Return),
+            Type::Integer => self.context.bytecode.push(Opcode::IReturn),
+            _ => unimplemented!(),
+        };
+    }
+
+    fn generate_function_declaration(&mut self, fn_decl: FunctionDeclaration) {
         let arity = fn_decl.params.len();
         for (i, p) in fn_decl.params.into_iter().enumerate() {
-            self.locals.insert(p.name, Local::make(i, p.type_));
+            self.context.locals.insert(p.name, Local::make(i, p.type_));
         }
         for stmt in fn_decl.body {
-            code.instrs.extend(self.generate_statement(stmt).instrs)
+            self.generate_statement(stmt);
         }
 
         match fn_decl.return_type {
-            Type::Integer => code.instrs.push(Opcode::IReturn),
-            _ => code.instrs.push(Opcode::Return),
+            Type::Integer => self.context.bytecode.push(Opcode::IReturn),
+            _ => self.context.bytecode.push(Opcode::Return),
         }
 
         self.fns.insert(
             fn_decl.name,
             DefinedFn {
                 arity,
-                code,
+                code: self.context.bytecode.clone(),
                 max_locals: arity,
             },
         );
-        self.locals.clear();
-        Bytecode::make(vec![])
+        self.context.reset();
     }
 
-    fn generate_expression(&mut self, expression: Expression) -> Bytecode {
+    fn generate_expression(&mut self, expression: Expression) {
         match expression {
             Expression::Literal(literal) => self.generate_literal(literal),
             Expression::FunctionCall(fn_name) => self.generate_function_call(fn_name),
@@ -87,44 +126,41 @@ impl CodeGenerator {
         }
     }
 
-    fn generate_identifier(&mut self, ident: String) -> Bytecode {
-        let mut bytecode = Bytecode::make(vec![]);
+    fn generate_identifier(&mut self, ident: String) {
         let local = self
+            .context
             .locals
             .get(&ident)
             .expect(&format!("Expected '{}' to a local", &ident));
         match local.type_ {
-            Type::Integer => bytecode.instrs.push(Opcode::ILoad(local.index)),
+            Type::Integer => self.context.bytecode.push(Opcode::ILoad(local.index)),
             _ => unreachable!(),
         };
-        bytecode
     }
 
-    fn generate_binop(&mut self, binop: BinaryOp) -> Bytecode {
-        let mut bytecode = Bytecode::make(vec![]);
+    fn generate_binop(&mut self, binop: BinaryOp) {
         match binop {
             BinaryOp::Plus(type_) => match type_.unwrap() {
-                Type::Integer => bytecode.instrs.push(Opcode::IAdd),
+                Type::Integer => self.context.bytecode.push(Opcode::IAdd),
+                _ => unreachable!(),
+            },
+            BinaryOp::GratherThan(type_) => match type_.unwrap() {
+                Type::Integer => self.context.bytecode.push(Opcode::ICmpGT),
                 _ => unreachable!(),
             },
         }
-        bytecode
     }
 
-    fn generate_function_call(&mut self, fn_name: String) -> Bytecode {
-        let mut bytecode = Bytecode::make(vec![]);
-        bytecode.instrs.push(Opcode::Invoke(fn_name));
-        bytecode
+    fn generate_function_call(&mut self, fn_name: String) {
+        self.context.bytecode.push(Opcode::Invoke(fn_name));
     }
 
-    fn generate_literal(&mut self, literal: Literal) -> Bytecode {
-        let mut bytecode = Bytecode::make(vec![]);
+    fn generate_literal(&mut self, literal: Literal) {
         match literal {
-            Literal::Int(x) => bytecode.instrs.push(Opcode::Bipush(x)),
-            Literal::String(x) => bytecode.instrs.push(Opcode::Ldc(
+            Literal::Int(x) => self.context.bytecode.push(Opcode::Bipush(x)),
+            Literal::String(x) => self.context.bytecode.push(Opcode::Ldc(
                 self.pool.append(PoolEntry::Object(Object::String(x))),
             )),
         };
-        bytecode
     }
 }

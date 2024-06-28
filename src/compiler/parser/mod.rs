@@ -65,11 +65,20 @@ impl<'a> Parser<'a> {
     fn parse_statement(&mut self) -> Result<Statment, String> {
         match self.curr_token {
             Token::F => self.parse_function_declaration(),
+            Token::If => self.parse_if_statement(),
+            Token::Return => Ok(Statment::Return(None)),
             _ => match self.parse_expression() {
                 Ok(expression) => Ok(Statment::Expression(expression)),
                 Err(err) => Err(err),
             },
         }
+    }
+
+    fn parse_if_statement(&mut self) -> Result<Statment, String> {
+        self.bump_expected(Token::If)?;
+        self.bump_expected(Token::Arrow)?;
+        let block = self.parse_block_statement()?;
+        Ok(Statment::If(block))
     }
 
     fn parse_function_declaration(&mut self) -> Result<Statment, String> {
@@ -173,6 +182,7 @@ impl<'a> Parser<'a> {
             Token::Identifier(ref identifier) => Ok(Expression::Identifier(identifier.clone())),
             Token::Dot => self.parse_function_call(),
             Token::Plus => Ok(Expression::BinaryOp(BinaryOp::Plus(None))),
+            Token::GratherThan => Ok(Expression::BinaryOp(BinaryOp::GratherThan(None))),
             _ => return Err(format!("Unexpected expression: {}", self.curr_token)),
         }
     }

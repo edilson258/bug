@@ -59,6 +59,7 @@ impl<'a> Lexer<'a> {
             ';' => Some(Token::Semicolon),
             ',' => Some(Token::Comma),
             '.' => Some(Token::Dot),
+            '>' => Some(Token::GratherThan),
             '-' => {
                 if self.next_char_is('>') {
                     self.read_char();
@@ -100,6 +101,8 @@ impl<'a> Lexer<'a> {
             "f" => Token::F,
             "int" => Token::TypeInteger,
             "str" => Token::TypeString,
+            "if" => Token::If,
+            "return" => Token::Return,
             _ => Token::Identifier(literal),
         }
     }

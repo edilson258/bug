@@ -19,9 +19,13 @@ pub enum Token {
     Rparen,
     Semicolon,
     F,
+    If,
+    Return,
 
     TypeInteger,
     TypeString,
+
+    GratherThan,
 }
 
 impl fmt::Display for Token {
@@ -43,6 +47,9 @@ impl fmt::Display for Token {
             Self::TypeInteger => write!(f, "int"),
             Self::TypeString => write!(f, "str"),
             Self::Comma => write!(f, ","),
+            Self::If => write!(f, "if"),
+            Self::GratherThan => write!(f, ">"),
+            Self::Return => write!(f, "return"),
         }
     }
 }

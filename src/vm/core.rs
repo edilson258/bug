@@ -16,9 +16,13 @@ impl Runtime {
         let mut framestack: Stack<Frame> = Stack::make();
         let mut current_frame = Frame::make(main_fn.code.clone(), main_fn.max_locals);
 
+        // registers
+        let mut bflag: bool = false;
+
         loop {
             let instr = current_frame.fetch_next_instr();
             match instr {
+                Opcode::Nop => continue,
                 Opcode::IAdd => Self::iadd(&mut current_frame),
                 Opcode::IMul => Self::imul(&mut current_frame),
                 Opcode::IDiv => Self::idiv(&mut current_frame),
@@ -95,6 +99,20 @@ impl Runtime {
                     if fst > snd {
                         current_frame.pc = offset;
                     }
+                }
+                Opcode::ICmpGT => {
+                    let (lhs, rhs) = Self::ipop_two(&mut current_frame);
+                    if lhs > rhs {
+                        bflag = true
+                    } else {
+                        bflag = false
+                    }
+                }
+                Opcode::JumpIfFalse(offset) => {
+                    if bflag == true {
+                        continue;
+                    }
+                    current_frame.pc = offset;
                 }
                 Opcode::IIncr(index, constant) => Self::iincr(&mut current_frame, index, constant),
                 Opcode::Bipush(iconst) => current_frame.opstack.push(Object::Int(iconst)),

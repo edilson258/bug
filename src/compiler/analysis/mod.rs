@@ -57,7 +57,62 @@ impl Analyser {
         match stmt {
             Statment::FunctionDeclaration(fn_decl) => self.analyse_function_declaration(fn_decl),
             Statment::Expression(expression) => self.analyse_expression(expression),
+            Statment::If(block) => self.analyse_if_statement(block),
+            Statment::Return(type_) => self.analyse_return_statement(type_),
         }
+    }
+
+    fn analyse_if_statement(&mut self, block: &mut BlockStatment) -> Result<(), AnalyserError> {
+        if self.typestack.is_empty() {
+            return Err(AnalyserError::arg_error(format!(
+                "Missing operand for 'if'"
+            )));
+        }
+        if self.typestack.len() > 1 {
+            return Err(AnalyserError::unhandled_stack(format!(
+                "Unhandled stack values before 'if'"
+            )));
+        }
+        if Type::Boolean != self.typestack.pop().unwrap() {
+            return Err(AnalyserError::type_error(format!(
+                "'if' expects boolean value on stack"
+            )));
+        }
+
+        /*
+        f inf(int x) int ->
+          x 4 > if -> x return;
+          x 1 + .inf;
+          */
+
+        for stmt in block {
+            self.analyse_statement(stmt)?;
+        }
+
+        if !self.typestack.is_empty() {
+            return Err(AnalyserError::unhandled_stack(format!(
+                "Unhandled stack values after 'if' block"
+            )));
+        }
+
+        Ok(())
+    }
+
+    fn analyse_return_statement(&mut self, type_: &mut Option<Type>) -> Result<(), AnalyserError> {
+        if self.typestack.is_empty() {
+            *type_ = Some(Type::Void);
+            return Ok(());
+        }
+        if self.typestack.len() > 1 {
+            return Err(AnalyserError::unhandled_stack(format!(
+                "Unhandled stack values before 'return'"
+            )));
+        }
+        match self.typestack.pop().unwrap() {
+            Type::Integer => *type_ = Some(Type::Integer),
+            _ => todo!(),
+        }
+        Ok(())
     }
 
     fn analyse_function_declaration(
@@ -201,6 +256,18 @@ impl Analyser {
                 Type::Integer => {
                     *type_ = Some(Type::Integer);
                     self.typestack.push(lhs)
+                }
+                _ => {
+                    return Err(AnalyserError::type_error(format!(
+                        "'{:#?}' operation not supported for '{}' type",
+                        binop, lhs
+                    )))
+                }
+            },
+            BinaryOp::GratherThan(type_) => match lhs {
+                Type::Integer => {
+                    *type_ = Some(Type::Integer);
+                    self.typestack.push(Type::Boolean);
                 }
                 _ => {
                     return Err(AnalyserError::type_error(format!(

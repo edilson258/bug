@@ -11,6 +11,7 @@ pub enum Literal {
 #[derive(Debug)]
 pub enum BinaryOp {
     Plus(Option<Type>),
+    GratherThan(Option<Type>),
 }
 
 #[derive(Debug)]
@@ -52,6 +53,8 @@ impl FunctionDeclaration {
 
 #[derive(Debug)]
 pub enum Statment {
+    If(BlockStatment),
+    Return(Option<Type>),
     Expression(Expression),
     FunctionDeclaration(FunctionDeclaration),
 }

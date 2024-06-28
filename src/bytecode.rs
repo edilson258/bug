@@ -23,6 +23,10 @@ pub enum Opcode {
     IfICmpE(usize),
     IfICmpNE(usize),
 
+    ICmpGT,
+    JumpIfFalse(usize),
+    Nop,
+
     // data handlers
     Ldc(usize),
     ILdc(usize),
@@ -55,6 +59,14 @@ impl Bytecode {
             exit(1);
         }
     }
+
+    pub fn push(&mut self, op: Opcode) {
+        self.instrs.push(op);
+    }
+
+    pub fn push_many(&mut self, ops: Vec<Opcode>) {
+        self.instrs.extend(ops);
+    }
 }
 
 impl fmt::Display for Opcode {
@@ -77,6 +89,9 @@ impl fmt::Display for Opcode {
             Self::IMul => write!(f, "[imul]"),
             Self::IDiv => write!(f, "[idiv]"),
             Self::Ldc(usize) => write!(f, "[ldc] {}", usize),
+            Self::ICmpGT => write!(f, "[icmpgt]"),
+            Self::JumpIfFalse(usize) => write!(f, "jumpiffalse {usize}"),
+            Self::Nop => write!(f, "[Nop]"),
         }
     }
 }
