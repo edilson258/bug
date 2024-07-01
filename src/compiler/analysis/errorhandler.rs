@@ -7,7 +7,6 @@ enum AnalyserErrorKind {
     Argument,
     IllegalDeclaration,
     OutsideFunctionExpression,
-    UnhandledStack,
 }
 
 impl fmt::Display for AnalyserErrorKind {
@@ -17,7 +16,6 @@ impl fmt::Display for AnalyserErrorKind {
             Self::Name => write!(f, "[Name Error]"),
             Self::Argument => write!(f, "[Argument Error]"),
             Self::IllegalDeclaration => write!(f, "[Illegal Declaration]"),
-            Self::UnhandledStack => write!(f, "[Unhandled Stack]"),
             Self::OutsideFunctionExpression => write!(f, "[Outside function expression]"),
         }
     }
@@ -53,13 +51,6 @@ impl AnalyserError {
     pub fn illegal_decl(msg: String) -> Self {
         Self {
             kind: AnalyserErrorKind::IllegalDeclaration,
-            msg,
-        }
-    }
-
-    pub fn unhandled_stack(msg: String) -> Self {
-        Self {
-            kind: AnalyserErrorKind::UnhandledStack,
             msg,
         }
     }

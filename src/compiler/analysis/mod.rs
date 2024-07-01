@@ -12,6 +12,7 @@ use spider_vm::stdlib::{FnPrototype, Type};
 pub struct Analyser {
     context: Rc<RefCell<Context>>,
     typestack: Vec<Type>,
+    expected_type: Type,
 }
 
 impl Analyser {
@@ -19,6 +20,7 @@ impl Analyser {
         Self {
             context: Rc::new(RefCell::new(Context::make_global())),
             typestack: vec![],
+            expected_type: Type::Void,
         }
     }
 
@@ -30,7 +32,7 @@ impl Analyser {
                 .ok();
         }
 
-        if !self.has_main_fn() {
+        if !self.is_main_fn_declared() {
             errors.push(AnalyserError::name_error(format!(
                 "Missing 'main' function"
             )));
@@ -43,7 +45,7 @@ impl Analyser {
         }
     }
 
-    fn has_main_fn(&self) -> bool {
+    fn is_main_fn_declared(&self) -> bool {
         match self.context.borrow().lookup("main") {
             Some(obj) => match obj {
                 Object::FnPrototype(_) => true,
@@ -68,31 +70,14 @@ impl Analyser {
                 "Missing operand for 'if'"
             )));
         }
-        if self.typestack.len() > 1 {
-            return Err(AnalyserError::unhandled_stack(format!(
-                "Unhandled stack values before 'if'"
-            )));
-        }
         if Type::Boolean != self.typestack.pop().unwrap() {
             return Err(AnalyserError::type_error(format!(
                 "'if' expects boolean value on stack"
             )));
         }
 
-        /*
-        f inf(int x) int ->
-          x 4 > if -> x return;
-          x 1 + .inf;
-          */
-
         for stmt in block {
             self.analyse_statement(stmt)?;
-        }
-
-        if !self.typestack.is_empty() {
-            return Err(AnalyserError::unhandled_stack(format!(
-                "Unhandled stack values after 'if' block"
-            )));
         }
 
         Ok(())
@@ -103,12 +88,7 @@ impl Analyser {
             *type_ = Some(Type::Void);
             return Ok(());
         }
-        if self.typestack.len() > 1 {
-            return Err(AnalyserError::unhandled_stack(format!(
-                "Unhandled stack values before 'return'"
-            )));
-        }
-        match self.typestack.pop().unwrap() {
+        match self.typestack[0] {
             Type::Integer => *type_ = Some(Type::Integer),
             _ => todo!(),
         }
@@ -119,12 +99,16 @@ impl Analyser {
         &mut self,
         fn_decl: &mut FunctionDeclaration,
     ) -> Result<(), AnalyserError> {
+        self.typestack.clear();
+
+        // 1. check the scope where it's declared
         if self.context.borrow().type_ != ContextType::Global {
             return Err(AnalyserError::illegal_decl(format!(
                 "Functions must be only declared in global scope"
             )));
         }
 
+        // 2. check if the name is already taken
         if self.context.borrow().is_declared(&fn_decl.name) {
             return Err(AnalyserError::name_error(format!(
                 "'{}' is already bound",
@@ -151,6 +135,7 @@ impl Analyser {
             Rc::clone(&global_context),
         )));
         self.context = fn_context;
+        self.expected_type = fn_decl.return_type.clone();
 
         for param in &fn_decl.params {
             self.context
@@ -160,7 +145,6 @@ impl Analyser {
 
         for stmt in &mut fn_decl.body {
             if let Err(err) = self.analyse_statement(stmt) {
-                self.typestack.clear();
                 self.context = global_context;
                 return Err(err);
             }
@@ -168,7 +152,6 @@ impl Analyser {
 
         if self.typestack.is_empty() {
             if fn_decl.return_type != Type::Void {
-                self.typestack.clear();
                 self.context = global_context;
                 return Err(AnalyserError::type_error(format!(
                     "Missing return val for a non-void function '{}'",
@@ -176,19 +159,8 @@ impl Analyser {
                 )));
             }
         } else {
-            if self.typestack.len() > 1 {
-                self.typestack.clear();
-                self.context = global_context;
-                return Err(AnalyserError::unhandled_stack(format!(
-                    "Unhandled stack values for function '{}'",
-                    &fn_decl.name
-                )));
-            }
-
             let provided_type = self.typestack.pop().unwrap();
-
             if provided_type != fn_decl.return_type {
-                self.typestack.clear();
                 self.context = global_context;
                 return Err(AnalyserError::type_error(format!(
                     "Function '{}' expects return type {} but provided {}",
@@ -227,15 +199,8 @@ impl Analyser {
     }
 
     fn analyse_binop(&mut self, binop: &mut BinaryOp) -> Result<(), AnalyserError> {
-        if self.typestack.len() > 2 {
-            return Err(AnalyserError::unhandled_stack(format!(
-                "Must handle stack values before '{:#?}' operation",
-                binop
-            )));
-        }
-
         if self.typestack.len() < 2 {
-            return Err(AnalyserError::unhandled_stack(format!(
+            return Err(AnalyserError::type_error(format!(
                 "Missing operands for '{:#?}' operation",
                 binop
             )));
@@ -310,13 +275,6 @@ impl Analyser {
         if (self.typestack.len() as u8) < prototype.arity {
             return Err(AnalyserError::arg_error(format!(
                 "Missing arguments for function '{}'",
-                fn_name
-            )));
-        }
-
-        if (self.typestack.len() as u8) > prototype.arity {
-            return Err(AnalyserError::unhandled_stack(format!(
-                "Unhandled stack values calling '{}'",
                 fn_name
             )));
         }
