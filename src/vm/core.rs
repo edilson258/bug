@@ -47,7 +47,7 @@ impl Runtime {
                         for index in 0..callee.arity {
                             callee_current_frame
                                 .locals
-                                .store_at(index, current_frame.opstack.pop());
+                                .store_at(callee.arity - index - 1, current_frame.opstack.pop());
                         }
 
                         framestack.push(current_frame.clone());
