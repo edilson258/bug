@@ -1,6 +1,0 @@
-f inf(int x) int -> 
-  x 10 > if -> x return;
-  x 1 + .inf;
-
-f sum(int x, int y) int -> x y +;
-f main -> 34 35 .sum .write 0 .inf .write;
