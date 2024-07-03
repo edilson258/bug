@@ -294,6 +294,20 @@ impl Analyser {
             )));
         }
 
+        for (index, (expected_type, provided_type)) in
+            prototype.argtypes.iter().zip(&self.metastack).enumerate()
+        {
+            if expected_type != provided_type {
+                return Err(AnalyserError::type_error(format!(
+                    "The {} parameter of '{}' function expected to be of type '{}' but provided value of type '{}'",
+                    index + 1,
+                    fn_name,
+                    expected_type,
+                    provided_type
+                )));
+            }
+        }
+
         self.metastack.clear();
         if prototype.return_type != Type::Void {
             self.metastack.push(prototype.return_type.clone());
