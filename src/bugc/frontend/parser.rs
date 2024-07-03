@@ -4,6 +4,8 @@ use super::lexer::Lexer;
 use super::Token;
 use crate::ast::*;
 
+type ParserError = String;
+
 pub struct Parser<'a> {
     lexer: &'a mut Lexer<'a>,
     curr_token: Token,
@@ -19,7 +21,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn bump(&mut self) -> Result<(), String> {
+    fn bump(&mut self) -> Result<(), ParserError> {
         self.curr_token = self.next_token.clone();
         match self.lexer.next_token() {
             Ok(next_token) => {
@@ -30,7 +32,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn bump_expected(&mut self, token: Token) -> Result<(), String> {
+    fn bump_expected(&mut self, token: Token) -> Result<(), ParserError> {
         if self.curr_token == token {
             self.bump()?;
             Ok(())
@@ -43,7 +45,7 @@ impl<'a> Parser<'a> {
         self.curr_token == token
     }
 
-    pub fn parse(&mut self) -> Result<AST, String> {
+    pub fn parse(&mut self) -> Result<AST, ParserError> {
         self.bump()?;
         self.bump()?;
 
@@ -61,7 +63,7 @@ impl<'a> Parser<'a> {
         Ok(ast)
     }
 
-    fn parse_statement(&mut self) -> Result<Statement, String> {
+    fn parse_statement(&mut self) -> Result<Statement, ParserError> {
         match self.curr_token {
             Token::FunctionDeclarator => self.parse_function_declaration(),
             Token::If => self.parse_if_statement(),
@@ -72,14 +74,14 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_if_statement(&mut self) -> Result<Statement, String> {
+    fn parse_if_statement(&mut self) -> Result<Statement, ParserError> {
         self.bump_expected(Token::If)?;
         self.bump_expected(Token::Arrow)?;
         let block = self.parse_block_statement()?;
         Ok(Statement::If(block))
     }
 
-    fn parse_function_declaration(&mut self) -> Result<Statement, String> {
+    fn parse_function_declaration(&mut self) -> Result<Statement, ParserError> {
         self.bump_expected(Token::FunctionDeclarator)?;
         let name = match self.curr_token {
             Token::Identifier(ref name) => name.clone(),
@@ -102,7 +104,7 @@ impl<'a> Parser<'a> {
         }))
     }
 
-    fn parse_function_return_type(&mut self) -> Result<Type, String> {
+    fn parse_function_return_type(&mut self) -> Result<Type, ParserError> {
         let type_ = match self.curr_token {
             Token::Arrow => Type::Void,
             Token::TypeInteger => Type::Integer,
@@ -122,7 +124,7 @@ impl<'a> Parser<'a> {
         Ok(type_)
     }
 
-    fn parse_function_params(&mut self) -> Result<FnParams, String> {
+    fn parse_function_params(&mut self) -> Result<FnParams, ParserError> {
         let mut params: FnParams = vec![];
         if self.curr_token == Token::Arrow {
             return Ok(params);
@@ -164,7 +166,7 @@ impl<'a> Parser<'a> {
         Ok(params)
     }
 
-    fn parse_block_statement(&mut self) -> Result<BlockStatement, String> {
+    fn parse_block_statement(&mut self) -> Result<BlockStatement, ParserError> {
         let mut block: BlockStatement = vec![];
         while !self.is_curr_token(Token::Semicolon) {
             block.push(self.parse_statement()?);
@@ -173,7 +175,7 @@ impl<'a> Parser<'a> {
         Ok(block)
     }
 
-    fn parse_expression(&mut self) -> Result<Expression, String> {
+    fn parse_expression(&mut self) -> Result<Expression, ParserError> {
         match self.curr_token {
             Token::Int(x) => Ok(Expression::Literal(Literal::Int(x))),
             Token::String(ref x) => Ok(Expression::Literal(Literal::String(x.clone()))),
@@ -186,7 +188,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_function_call(&mut self) -> Result<Expression, String> {
+    fn parse_function_call(&mut self) -> Result<Expression, ParserError> {
         self.bump_expected(Token::Dot)?;
         match &self.curr_token {
             Token::Identifier(ref fn_name) => Ok(Expression::FunctionCall(fn_name.clone())),

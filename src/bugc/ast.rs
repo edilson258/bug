@@ -1,3 +1,5 @@
+use core::fmt;
+
 use bug::Type;
 
 #[derive(Debug)]
@@ -45,4 +47,13 @@ pub enum Literal {
 pub enum BinaryOp {
     Plus(Option<Type>),
     GratherThan(Option<Type>),
+}
+
+impl fmt::Display for BinaryOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Plus(_) => write!(f, "+"),
+            Self::GratherThan(_) => write!(f, ">"),
+        }
+    }
 }

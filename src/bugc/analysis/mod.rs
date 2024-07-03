@@ -32,11 +32,7 @@ impl Analyser {
                 .ok();
         }
 
-        if !self.is_main_fn_declared() {
-            errors.push(AnalyserError::name_error(format!(
-                "Missing 'main' function"
-            )));
-        }
+        self.check_main_function(&mut errors);
 
         if errors.is_empty() {
             Ok(())
@@ -45,13 +41,25 @@ impl Analyser {
         }
     }
 
-    fn is_main_fn_declared(&self) -> bool {
-        match self.context.borrow().lookup("main") {
-            Some(obj) => match obj {
-                MetaObject::FnPrototype(_) => true,
-                _ => false,
-            },
-            _ => false,
+    fn check_main_function(&self, errors: &mut AnalyserErrors) {
+        let main_fn = self.context.borrow().lookup("main");
+        if main_fn.is_none() {
+            errors.push(AnalyserError::name_error(format!(
+                "Missing 'main' function"
+            )));
+            return;
+        }
+
+        if let MetaObject::FnPrototype(fn_prototype) = main_fn.unwrap() {
+            if fn_prototype.arity != 0 || fn_prototype.return_type != Type::Void {
+                errors.push(AnalyserError::type_error(format!(
+                    "'main' function cannot accept args or return some value"
+                )));
+            }
+        } else {
+            errors.push(AnalyserError::name_error(format!(
+                "'main' must be declared as function"
+            )));
         }
     }
 
@@ -66,12 +74,12 @@ impl Analyser {
     fn analyse_if_statement(&mut self, block: &mut BlockStatement) -> Result<(), AnalyserError> {
         if self.metastack.is_empty() {
             return Err(AnalyserError::arg_error(format!(
-                "Missing operand for 'if'"
+                "'if' expects boolean value on top of the stack"
             )));
         }
         if Type::Boolean != self.metastack.pop().unwrap() {
             return Err(AnalyserError::type_error(format!(
-                "'if' expects boolean value on stack"
+                "'if' expects boolean value on top of the stack"
             )));
         }
 
@@ -82,7 +90,7 @@ impl Analyser {
         if self.metastack.is_empty() {
             if self.expected_type != Type::Void {
                 return Err(AnalyserError::type_error(format!(
-                    "If block returns 'void' where '{}' is expected",
+                    "'if' block returns 'void' where '{}' is expected",
                     self.expected_type
                 )));
             }
@@ -90,7 +98,7 @@ impl Analyser {
             let provided_type = self.metastack.last().unwrap();
             if self.expected_type != *provided_type {
                 return Err(AnalyserError::type_error(format!(
-                    "If block returns '{}' where '{}' is expected",
+                    "'if' block returns '{}' where '{}' is expected",
                     provided_type, self.expected_type
                 )));
             }
@@ -158,7 +166,7 @@ impl Analyser {
             if fn_decl.return_type != Type::Void {
                 self.context = global_context;
                 return Err(AnalyserError::type_error(format!(
-                    "Missing return val for a non-void function '{}'",
+                    "Missing return value for a non-void function '{}'",
                     &fn_decl.name
                 )));
             }
@@ -208,7 +216,7 @@ impl Analyser {
     fn analyse_binop(&mut self, binop: &mut BinaryOp) -> Result<(), AnalyserError> {
         if self.metastack.len() < 2 {
             return Err(AnalyserError::type_error(format!(
-                "Missing operands for '{:#?}' operation",
+                "Missing operands for '{}' operation",
                 binop
             )));
         }
@@ -218,7 +226,7 @@ impl Analyser {
 
         if rhs != lhs {
             return Err(AnalyserError::type_error(format!(
-                "Operands of '{:#?}' operation must be of same type, but provided '{}' and '{}'",
+                "Operands of '{}' operation must be of same type, but provided '{}' and '{}'",
                 binop, lhs, rhs
             )));
         }
@@ -231,7 +239,7 @@ impl Analyser {
                 }
                 _ => {
                     return Err(AnalyserError::type_error(format!(
-                        "'{:#?}' operation not supported for '{}' type",
+                        "'{}' operation not supported for '{}' type",
                         binop, lhs
                     )))
                 }
@@ -243,7 +251,7 @@ impl Analyser {
                 }
                 _ => {
                     return Err(AnalyserError::type_error(format!(
-                        "'{:#?}' operation not supported for '{}' type",
+                        "'{}' operation not supported for '{}' type",
                         binop, lhs
                     )))
                 }
