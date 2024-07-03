@@ -1,8 +1,8 @@
 use std::process::exit;
 
 use crate::stack::Stack;
-use spider_vm::bytecode::{Bytecode, Opcode};
-use spider_vm::object::Object;
+use bug::bytecode::{Bytecode, Opcode};
+use bug::Object;
 
 #[derive(Debug, Clone)]
 pub struct Locals {
@@ -29,17 +29,6 @@ impl Locals {
         self.inner[index].clone()
     }
 
-    pub fn get_as_ref(&mut self, index: usize) -> &mut Object {
-        if index >= self.inner.len() {
-            eprintln!(
-                "[Error]: Couldn't access to locals by index {}: OutOfRange",
-                index
-            );
-            exit(1);
-        }
-        &mut self.inner[index]
-    }
-
     pub fn store_at(&mut self, index: usize, o: Object) {
         self.inner[index] = o;
     }
@@ -50,7 +39,7 @@ pub struct Frame {
     pub pc: usize,
     code: Bytecode,
     pub locals: Locals,
-    pub opstack: Stack<Object>,
+    pub stack: Stack<Object>,
 }
 
 impl Frame {
@@ -58,7 +47,7 @@ impl Frame {
         Self {
             pc: 0,
             code,
-            opstack: Stack::make(),
+            stack: Stack::make(),
             locals: Locals::make(max_locals),
         }
     }
@@ -67,13 +56,5 @@ impl Frame {
         let instr = self.code.fetch_by_index(self.pc);
         self.pc += 1;
         instr
-    }
-
-    pub fn stack_push(&mut self, o: Object) {
-        self.opstack.push(o);
-    }
-
-    pub fn stack_pop(&mut self) -> Object {
-        self.opstack.pop()
     }
 }

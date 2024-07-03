@@ -1,9 +1,7 @@
 mod analysis;
 mod ast;
-mod codegen;
-mod lexer;
-mod parser;
-mod token;
+mod codegeneration;
+mod frontend;
 mod utils;
 
 use std::io::Write;
@@ -13,9 +11,8 @@ use std::{env, fs};
 use utils::read_file;
 
 use crate::analysis::Analyser;
-use crate::codegen::CodeGenerator;
-use crate::lexer::Lexer;
-use crate::parser::Parser;
+use crate::codegeneration::CodeGenerator;
+use frontend::{lexer::Lexer, parser::Parser};
 
 fn main() {
     let args: Vec<String> = env::args().collect();

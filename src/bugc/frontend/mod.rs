@@ -1,3 +1,6 @@
+pub mod lexer;
+pub mod parser;
+
 use core::fmt;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -18,7 +21,7 @@ pub enum Token {
     Lparen,
     Rparen,
     Semicolon,
-    F,
+    FunctionDeclarator,
     If,
     Return,
 
@@ -43,7 +46,7 @@ impl fmt::Display for Token {
             Self::Rparen => write!(f, ")"),
             Self::Semicolon => write!(f, ";"),
             Self::Minus => write!(f, "-"),
-            Self::F => write!(f, "[Function declaration] f"),
+            Self::FunctionDeclarator => write!(f, "[Function declaration] f"),
             Self::TypeInteger => write!(f, "int"),
             Self::TypeString => write!(f, "str"),
             Self::Comma => write!(f, ","),

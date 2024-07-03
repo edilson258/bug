@@ -1,9 +1,8 @@
-use spider_vm::stdlib::Type;
+use bug::Type;
 
-use super::ast::{Expression, FnParam, FnParams, Literal, Statment, AST};
 use super::lexer::Lexer;
-use super::token::Token;
-use crate::ast::{BinaryOp, BlockStatment, FunctionDeclaration};
+use super::Token;
+use crate::ast::*;
 
 pub struct Parser<'a> {
     lexer: &'a mut Lexer<'a>,
@@ -62,27 +61,26 @@ impl<'a> Parser<'a> {
         Ok(ast)
     }
 
-    fn parse_statement(&mut self) -> Result<Statment, String> {
+    fn parse_statement(&mut self) -> Result<Statement, String> {
         match self.curr_token {
-            Token::F => self.parse_function_declaration(),
+            Token::FunctionDeclarator => self.parse_function_declaration(),
             Token::If => self.parse_if_statement(),
-            Token::Return => Ok(Statment::Return(None)),
             _ => match self.parse_expression() {
-                Ok(expression) => Ok(Statment::Expression(expression)),
+                Ok(expression) => Ok(Statement::Expression(expression)),
                 Err(err) => Err(err),
             },
         }
     }
 
-    fn parse_if_statement(&mut self) -> Result<Statment, String> {
+    fn parse_if_statement(&mut self) -> Result<Statement, String> {
         self.bump_expected(Token::If)?;
         self.bump_expected(Token::Arrow)?;
         let block = self.parse_block_statement()?;
-        Ok(Statment::If(block))
+        Ok(Statement::If(block))
     }
 
-    fn parse_function_declaration(&mut self) -> Result<Statment, String> {
-        self.bump_expected(Token::F)?;
+    fn parse_function_declaration(&mut self) -> Result<Statement, String> {
+        self.bump_expected(Token::FunctionDeclarator)?;
         let name = match self.curr_token {
             Token::Identifier(ref name) => name.clone(),
             _ => return Err(format!("'f' must follow an identifier")),
@@ -96,12 +94,12 @@ impl<'a> Parser<'a> {
 
         let body = self.parse_block_statement()?;
 
-        Ok(Statment::FunctionDeclaration(FunctionDeclaration::make(
+        Ok(Statement::FunctionDeclaration(FunctionDeclaration {
             name,
             params,
             return_type,
             body,
-        )))
+        }))
     }
 
     fn parse_function_return_type(&mut self) -> Result<Type, String> {
@@ -166,8 +164,8 @@ impl<'a> Parser<'a> {
         Ok(params)
     }
 
-    fn parse_block_statement(&mut self) -> Result<BlockStatment, String> {
-        let mut block: BlockStatment = vec![];
+    fn parse_block_statement(&mut self) -> Result<BlockStatement, String> {
+        let mut block: BlockStatement = vec![];
         while !self.is_curr_token(Token::Semicolon) {
             block.push(self.parse_statement()?);
             self.bump()?;
@@ -183,6 +181,7 @@ impl<'a> Parser<'a> {
             Token::Dot => self.parse_function_call(),
             Token::Plus => Ok(Expression::BinaryOp(BinaryOp::Plus(None))),
             Token::GratherThan => Ok(Expression::BinaryOp(BinaryOp::GratherThan(None))),
+            Token::Return => Ok(Expression::Return(None)),
             _ => return Err(format!("Unexpected expression: {}", self.curr_token)),
         }
     }

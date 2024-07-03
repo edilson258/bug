@@ -1,4 +1,4 @@
-use super::token::Token;
+use super::Token;
 
 const NULL_CHAR: char = '\0';
 
@@ -98,7 +98,7 @@ impl<'a> Lexer<'a> {
         let literal = self.chop_while(|x| x.is_alphanumeric() || x == '_');
         // look for keywords
         match literal.as_str() {
-            "f" => Token::F,
+            "f" => Token::FunctionDeclarator,
             "int" => Token::TypeInteger,
             "str" => Token::TypeString,
             "if" => Token::If,

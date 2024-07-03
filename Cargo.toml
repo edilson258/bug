@@ -1,5 +1,5 @@
 [package]
-name = "spider-vm"
+name = "bug"
 version = "0.1.0"
 edition = "2021"
 
@@ -10,9 +10,9 @@ bincode = "1.3.3"
 serde = { version = "1.0.202", features = ["derive"] }
 
 [[bin]]
-name = "compiler"
-path = "src/compiler/mod.rs"
+name = "bugc"
+path = "src/bugc/mod.rs"
 
 [[bin]]
-name = "spider"
-path = "src/vm/mod.rs"
+name = "bvm"
+path = "src/bvm/mod.rs"

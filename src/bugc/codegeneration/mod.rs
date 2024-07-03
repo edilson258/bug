@@ -1,12 +1,8 @@
 use std::collections::HashMap;
 
 use crate::ast::*;
-
-use spider_vm::bytecode::{Bytecode, Opcode};
-use spider_vm::object::Object;
-use spider_vm::pool::{Pool, PoolEntry};
-use spider_vm::program::{DefinedFn, Program};
-use spider_vm::stdlib::Type;
+use bug::bytecode::{Bytecode, Opcode};
+use bug::{DefinedFn, Object, Pool, PoolEntry, Program, Type};
 
 struct Context {
     bytecode: Bytecode,
@@ -63,16 +59,15 @@ impl CodeGenerator {
         }
     }
 
-    fn generate_statement(&mut self, stmt: Statment) {
+    fn generate_statement(&mut self, stmt: Statement) {
         match stmt {
-            Statment::Expression(expr) => self.generate_expression(expr),
-            Statment::FunctionDeclaration(fn_decl) => self.generate_function_declaration(fn_decl),
-            Statment::If(block) => self.generate_if_statement(block),
-            Statment::Return(type_) => self.generate_return_statement(type_.unwrap()),
+            Statement::Expression(expr) => self.generate_expression(expr),
+            Statement::FunctionDeclaration(fn_decl) => self.generate_function_declaration(fn_decl),
+            Statement::If(block) => self.generate_if_statement(block),
         }
     }
 
-    fn generate_if_statement(&mut self, block: BlockStatment) {
+    fn generate_if_statement(&mut self, block: BlockStatement) {
         // Adding "No operation" as placeholder to substitute later with a "JumpIfFalse" op
         let nop_index = self.context.bytecode.instrs.len();
         self.context.bytecode.push(Opcode::Nop);
@@ -84,15 +79,9 @@ impl CodeGenerator {
         self.context.bytecode.instrs[nop_index] = Opcode::JumpIfFalse(after_if_block);
     }
 
-    fn generate_return_statement(&mut self, type_: Type) {
-        match type_ {
-            Type::Void => self.context.bytecode.push(Opcode::Return),
-            Type::Integer => self.context.bytecode.push(Opcode::IReturn),
-            _ => unimplemented!(),
-        };
-    }
-
     fn generate_function_declaration(&mut self, fn_decl: FunctionDeclaration) {
+        self.context.reset();
+
         let arity = fn_decl.params.len();
         for (i, p) in fn_decl.params.into_iter().enumerate() {
             self.context.locals.insert(p.name, Local::make(i, p.type_));
@@ -114,7 +103,6 @@ impl CodeGenerator {
                 max_locals: arity,
             },
         );
-        self.context.reset();
     }
 
     fn generate_expression(&mut self, expression: Expression) {
@@ -123,6 +111,7 @@ impl CodeGenerator {
             Expression::FunctionCall(fn_name) => self.generate_function_call(fn_name),
             Expression::BinaryOp(binop) => self.generate_binop(binop),
             Expression::Identifier(ident) => self.generate_identifier(ident),
+            Expression::Return(type_) => self.generate_return_expression(type_.unwrap()),
         }
     }
 
@@ -161,6 +150,14 @@ impl CodeGenerator {
             Literal::String(x) => self.context.bytecode.push(Opcode::Ldc(
                 self.pool.append(PoolEntry::Object(Object::String(x))),
             )),
+        };
+    }
+
+    fn generate_return_expression(&mut self, type_: Type) {
+        match type_ {
+            Type::Void => self.context.bytecode.push(Opcode::Return),
+            Type::Integer => self.context.bytecode.push(Opcode::IReturn),
+            _ => unimplemented!(),
         };
     }
 }

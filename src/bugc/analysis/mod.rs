@@ -5,13 +5,13 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::ast::*;
-use context::{Context, ContextType, Object};
+use bug::{FnPrototype, Type};
+use context::{Context, ContextType, MetaObject};
 use errorhandler::{AnalyserError, AnalyserErrors};
-use spider_vm::stdlib::{FnPrototype, Type};
 
 pub struct Analyser {
     context: Rc<RefCell<Context>>,
-    typestack: Vec<Type>,
+    metastack: Vec<Type>,
     expected_type: Type,
 }
 
@@ -19,7 +19,7 @@ impl Analyser {
     pub fn make() -> Self {
         Self {
             context: Rc::new(RefCell::new(Context::make_global())),
-            typestack: vec![],
+            metastack: vec![],
             expected_type: Type::Void,
         }
     }
@@ -48,29 +48,28 @@ impl Analyser {
     fn is_main_fn_declared(&self) -> bool {
         match self.context.borrow().lookup("main") {
             Some(obj) => match obj {
-                Object::FnPrototype(_) => true,
+                MetaObject::FnPrototype(_) => true,
                 _ => false,
             },
             _ => false,
         }
     }
 
-    fn analyse_statement(&mut self, stmt: &mut Statment) -> Result<(), AnalyserError> {
+    fn analyse_statement(&mut self, stmt: &mut Statement) -> Result<(), AnalyserError> {
         match stmt {
-            Statment::FunctionDeclaration(fn_decl) => self.analyse_function_declaration(fn_decl),
-            Statment::Expression(expression) => self.analyse_expression(expression),
-            Statment::If(block) => self.analyse_if_statement(block),
-            Statment::Return(type_) => self.analyse_return_statement(type_),
+            Statement::If(block) => self.analyse_if_statement(block),
+            Statement::Expression(expression) => self.analyse_expression(expression),
+            Statement::FunctionDeclaration(fn_decl) => self.analyse_function_declaration(fn_decl),
         }
     }
 
-    fn analyse_if_statement(&mut self, block: &mut BlockStatment) -> Result<(), AnalyserError> {
-        if self.typestack.is_empty() {
+    fn analyse_if_statement(&mut self, block: &mut BlockStatement) -> Result<(), AnalyserError> {
+        if self.metastack.is_empty() {
             return Err(AnalyserError::arg_error(format!(
                 "Missing operand for 'if'"
             )));
         }
-        if Type::Boolean != self.typestack.pop().unwrap() {
+        if Type::Boolean != self.metastack.pop().unwrap() {
             return Err(AnalyserError::type_error(format!(
                 "'if' expects boolean value on stack"
             )));
@@ -80,18 +79,23 @@ impl Analyser {
             self.analyse_statement(stmt)?;
         }
 
-        Ok(())
-    }
+        if self.metastack.is_empty() {
+            if self.expected_type != Type::Void {
+                return Err(AnalyserError::type_error(format!(
+                    "If block returns 'void' where '{}' is expected",
+                    self.expected_type
+                )));
+            }
+        } else {
+            let provided_type = self.metastack.last().unwrap();
+            if self.expected_type != *provided_type {
+                return Err(AnalyserError::type_error(format!(
+                    "If block returns '{}' where '{}' is expected",
+                    provided_type, self.expected_type
+                )));
+            }
+        }
 
-    fn analyse_return_statement(&mut self, type_: &mut Option<Type>) -> Result<(), AnalyserError> {
-        if self.typestack.is_empty() {
-            *type_ = Some(Type::Void);
-            return Ok(());
-        }
-        match self.typestack[0] {
-            Type::Integer => *type_ = Some(Type::Integer),
-            _ => todo!(),
-        }
         Ok(())
     }
 
@@ -99,7 +103,7 @@ impl Analyser {
         &mut self,
         fn_decl: &mut FunctionDeclaration,
     ) -> Result<(), AnalyserError> {
-        self.typestack.clear();
+        self.metastack.clear();
 
         // 1. check the scope where it's declared
         if self.context.borrow().type_ != ContextType::Global {
@@ -118,7 +122,7 @@ impl Analyser {
 
         self.context.borrow_mut().declare(
             fn_decl.name.clone(),
-            Object::FnPrototype(FnPrototype {
+            MetaObject::FnPrototype(FnPrototype {
                 arity: fn_decl.params.len() as u8,
                 argtypes: fn_decl
                     .params
@@ -140,7 +144,7 @@ impl Analyser {
         for param in &fn_decl.params {
             self.context
                 .borrow_mut()
-                .declare(param.name.clone(), Object::VarType(param.type_.clone()))
+                .declare(param.name.clone(), MetaObject::VarType(param.type_.clone()))
         }
 
         for stmt in &mut fn_decl.body {
@@ -150,7 +154,7 @@ impl Analyser {
             }
         }
 
-        if self.typestack.is_empty() {
+        if self.metastack.is_empty() {
             if fn_decl.return_type != Type::Void {
                 self.context = global_context;
                 return Err(AnalyserError::type_error(format!(
@@ -159,7 +163,7 @@ impl Analyser {
                 )));
             }
         } else {
-            let provided_type = self.typestack.pop().unwrap();
+            let provided_type = self.metastack.pop().unwrap();
             if provided_type != fn_decl.return_type {
                 self.context = global_context;
                 return Err(AnalyserError::type_error(format!(
@@ -184,30 +188,33 @@ impl Analyser {
             Expression::Literal(literal) => self.analyse_literal_expression(literal),
             Expression::FunctionCall(fn_name) => self.analyse_function_call(fn_name),
             Expression::BinaryOp(binop) => self.analyse_binop(binop),
-            Expression::Identifier(ident) => {
-                let variable = self.context.borrow().lookup(&ident);
-                if variable.is_none() {
-                    return Err(AnalyserError::name_error(format!("'{}' is unbound", ident)));
-                }
-                match variable.unwrap() {
-                    Object::FnPrototype(_) => todo!(),
-                    Object::VarType(type_) => self.typestack.push(type_),
-                }
-                Ok(())
-            }
+            Expression::Identifier(ident) => self.analyse_identifier(ident),
+            Expression::Return(type_) => self.analyse_return_expression(type_),
         }
     }
 
+    fn analyse_identifier(&mut self, ident: &mut String) -> Result<(), AnalyserError> {
+        let object = self.context.borrow().lookup(&ident);
+        if object.is_none() {
+            return Err(AnalyserError::name_error(format!("'{}' is unbound", ident)));
+        }
+        match object.unwrap() {
+            MetaObject::FnPrototype(_) => todo!(),
+            MetaObject::VarType(type_) => self.metastack.push(type_),
+        }
+        Ok(())
+    }
+
     fn analyse_binop(&mut self, binop: &mut BinaryOp) -> Result<(), AnalyserError> {
-        if self.typestack.len() < 2 {
+        if self.metastack.len() < 2 {
             return Err(AnalyserError::type_error(format!(
                 "Missing operands for '{:#?}' operation",
                 binop
             )));
         }
 
-        let rhs = self.typestack.pop().unwrap();
-        let lhs = self.typestack.pop().unwrap();
+        let rhs = self.metastack.pop().unwrap();
+        let lhs = self.metastack.pop().unwrap();
 
         if rhs != lhs {
             return Err(AnalyserError::type_error(format!(
@@ -220,7 +227,7 @@ impl Analyser {
             BinaryOp::Plus(type_) => match lhs {
                 Type::Integer => {
                     *type_ = Some(Type::Integer);
-                    self.typestack.push(lhs)
+                    self.metastack.push(lhs)
                 }
                 _ => {
                     return Err(AnalyserError::type_error(format!(
@@ -232,7 +239,7 @@ impl Analyser {
             BinaryOp::GratherThan(type_) => match lhs {
                 Type::Integer => {
                     *type_ = Some(Type::Integer);
-                    self.typestack.push(Type::Boolean);
+                    self.metastack.push(Type::Boolean);
                 }
                 _ => {
                     return Err(AnalyserError::type_error(format!(
@@ -248,8 +255,8 @@ impl Analyser {
 
     fn analyse_literal_expression(&mut self, literal: &mut Literal) -> Result<(), AnalyserError> {
         match literal {
-            Literal::Int(_) => self.typestack.push(Type::Integer),
-            Literal::String(_) => self.typestack.push(Type::String),
+            Literal::Int(_) => self.metastack.push(Type::Integer),
+            Literal::String(_) => self.metastack.push(Type::String),
         }
         Ok(())
     }
@@ -263,7 +270,7 @@ impl Analyser {
             )));
         }
         let prototype = match func.unwrap() {
-            Object::FnPrototype(prototype) => prototype,
+            MetaObject::FnPrototype(prototype) => prototype,
             _ => {
                 return Err(AnalyserError::type_error(format!(
                     "'{}' is not callable",
@@ -272,18 +279,23 @@ impl Analyser {
             }
         };
 
-        if (self.typestack.len() as u8) < prototype.arity {
+        if (self.metastack.len() as u8) < prototype.arity {
             return Err(AnalyserError::arg_error(format!(
                 "Missing arguments for function '{}'",
                 fn_name
             )));
         }
 
-        self.typestack.clear();
+        self.metastack.clear();
         if prototype.return_type != Type::Void {
-            self.typestack.push(prototype.return_type.clone());
+            self.metastack.push(prototype.return_type.clone());
         }
 
+        Ok(())
+    }
+
+    fn analyse_return_expression(&mut self, type_: &mut Option<Type>) -> Result<(), AnalyserError> {
+        *type_ = Some(self.metastack.last().unwrap_or(&Type::Void).clone());
         Ok(())
     }
 }

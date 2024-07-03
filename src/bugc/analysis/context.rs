@@ -2,31 +2,32 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use spider_vm::stdlib::{list_native_fns, FnPrototype, Type};
+use bug::stdlib::list_native_fns;
+use bug::{FnPrototype, Type};
 
 #[derive(Debug, Clone)]
-pub enum Object {
-    FnPrototype(FnPrototype),
+pub enum MetaObject {
     VarType(Type),
+    FnPrototype(FnPrototype),
 }
 
 #[derive(Debug, PartialEq)]
 pub enum ContextType {
-    Function,
     Global,
+    Function,
 }
 
 pub struct Context {
     pub type_: ContextType,
-    store: HashMap<String, Object>,
+    store: HashMap<String, MetaObject>,
     parent: Option<Rc<RefCell<Context>>>,
 }
 
 impl Context {
     pub fn make_global() -> Self {
-        let mut store: HashMap<String, Object> = HashMap::new();
+        let mut store: HashMap<String, MetaObject> = HashMap::new();
         for (name, native_fn) in list_native_fns() {
-            store.insert(name, Object::FnPrototype(native_fn.prototype));
+            store.insert(name, MetaObject::FnPrototype(native_fn.prototype));
         }
         Self {
             type_: ContextType::Global,
@@ -43,7 +44,7 @@ impl Context {
         }
     }
 
-    pub fn declare(&mut self, name: String, val: Object) {
+    pub fn declare(&mut self, name: String, val: MetaObject) {
         self.store.insert(name, val);
     }
 
@@ -57,7 +58,7 @@ impl Context {
         }
     }
 
-    pub fn lookup(&self, name: &str) -> Option<Object> {
+    pub fn lookup(&self, name: &str) -> Option<MetaObject> {
         if let Some(obj) = self.store.get(name) {
             return Some(obj.clone());
         }
