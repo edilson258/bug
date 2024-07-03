@@ -5,26 +5,32 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Opcode {
-    // No Operation
+    /// Will do nothing for a cycle
     Nop,
-
-    // arithmetic
+    /// Add two ints on top of the stack and push the result
     IAdd,
+    /// Multiply two ints on top of the stack and push the result
     IMul,
+    /// Substract two ints on top of the stack and push the result
     IDiv,
-
-    // control flow
+    /// Return from a frame (block)
     Return,
+    /// Returns an int from a frame (block)
     IReturn,
+    /// Will make a function call by provided name
     Invoke(String),
-
+    /// Will compare the two ints on top of stack and set the bflag register to true if the first
+    /// is grather than the second
     ICmpGT,
+    /// Will jump to the provided offset if the bflag register if false
     JumpIfFalse(usize),
-
-    // data handlers
+    /// Will Load a value from constant pool at provided index to the stack
     Ldc(usize),
+    /// Will load an int from locals at provided index to the stack
     ILoad(usize),
+    /// Will move an int from top of the stack to the locals at provided index
     IStore(usize),
+    /// Will push an imediate int to the stack
     Bipush(i32),
 }
 
