@@ -18,7 +18,7 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() <= 1 {
         eprintln!("[Error]: No input file provided");
-        return;
+        exit(1);
     }
     let file_content = match read_file(&args[1]) {
         Ok(contents) => contents,
@@ -28,7 +28,7 @@ fn main() {
                 args[1],
                 err.to_string()
             );
-            return;
+            exit(1);
         }
     };
     let input = file_content.to_string().chars().collect::<Vec<char>>();
@@ -50,7 +50,7 @@ fn main() {
             for err in errors {
                 eprintln!("{}", err);
             }
-            exit(1)
+            exit(1);
         }
     }
 
