@@ -1,23 +1,10 @@
-# Spider VM is a Stack-based virtual machine inspired by JVM
-Was meant to be the runtime of [Filipe programming language](https://github.com/edilson258/filipe)
+# Bug Language
 
-# Features
-- Data Loading (from constant pool & local variables to the operand stack)
-- Data Storing operations
-- Conditionals
-- Arithmetics (iadd, ...)
-- Branching and conditional branching
-- Routines (function calls)
+Bug is a stack-based programming language with a functional paradigm, developed for educational purposes.
 
-# Get started 
-1. clone this repository
-```shell
-git clone https://github.com/edilson258/spider-vm.git
+## Hello, world!
+
+`hello.bug`
+```code
+f main -> "Hello, world!" .write;
 ```
-2. build and run
-```
-cargo build
-cargo run
-```
-# Coming soon 🔜 
-- Load program from file
