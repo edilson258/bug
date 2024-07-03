@@ -5,9 +5,9 @@ mod stack;
 use std::env;
 use std::process::exit;
 
+use bug::utils::read_file_bytes;
+use bug::Program;
 use core::Runtime;
-use spider_vm::program::Program;
-use spider_vm::utils::read_file_bytes;
 
 fn main() {
     let cli_args: Vec<String> = env::args().collect();
@@ -33,6 +33,5 @@ fn main() {
         }
     };
 
-    let mut rt = Runtime::setup(program);
-    rt.run();
+    Runtime::run(program);
 }

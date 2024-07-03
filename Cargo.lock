@@ -12,6 +12,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "bug"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "serde",
+]
+
+[[package]]
 name = "proc-macro2"
 version = "1.0.82"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -47,14 +55,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "spider-vm"
-version = "0.1.0"
-dependencies = [
- "bincode",
- "serde",
 ]
 
 [[package]]

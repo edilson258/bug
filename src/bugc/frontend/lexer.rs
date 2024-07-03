@@ -1,4 +1,4 @@
-use super::token::Token;
+use super::Token;
 
 const NULL_CHAR: char = '\0';
 
@@ -54,6 +54,20 @@ impl<'a> Lexer<'a> {
 
         let token = match self.curr_char {
             '+' => Some(Token::Plus),
+            '(' => Some(Token::Lparen),
+            ')' => Some(Token::Rparen),
+            ';' => Some(Token::Semicolon),
+            ',' => Some(Token::Comma),
+            '.' => Some(Token::Dot),
+            '>' => Some(Token::GratherThan),
+            '-' => {
+                if self.next_char_is('>') {
+                    self.read_char();
+                    Some(Token::Arrow)
+                } else {
+                    Some(Token::Minus)
+                }
+            }
             '"' => {
                 let token = self.read_string();
                 self.read_char();
@@ -84,6 +98,11 @@ impl<'a> Lexer<'a> {
         let literal = self.chop_while(|x| x.is_alphanumeric() || x == '_');
         // look for keywords
         match literal.as_str() {
+            "f" => Token::FunctionDeclarator,
+            "int" => Token::TypeInteger,
+            "str" => Token::TypeString,
+            "if" => Token::If,
+            "return" => Token::Return,
             _ => Token::Identifier(literal),
         }
     }

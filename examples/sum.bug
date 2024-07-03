@@ -1,0 +1,2 @@
+f sum(int lhs, int rhs) int -> lhs rhs +;
+f main -> 34 35 .sum .write;
