@@ -13,6 +13,7 @@ pub struct Analyser {
     context: Rc<RefCell<Context>>,
     metastack: Vec<Type>,
     expected_type: Type,
+    errors: AnalyserErrors,
 }
 
 impl Analyser {
@@ -21,30 +22,26 @@ impl Analyser {
             context: Rc::new(RefCell::new(Context::make_global())),
             metastack: vec![],
             expected_type: Type::Void,
+            errors: vec![],
         }
     }
 
     pub fn analyse(&mut self, ast: &mut AST) -> Result<(), AnalyserErrors> {
-        let mut errors: AnalyserErrors = vec![];
         for stmt in ast {
-            self.analyse_statement(stmt)
-                .map_err(|err| errors.push(err))
-                .ok();
+            self.analyse_statement(stmt);
         }
-
-        self.check_main_function(&mut errors);
-
-        if errors.is_empty() {
+        self.check_main_function();
+        if self.errors.is_empty() {
             Ok(())
         } else {
-            Err(errors)
+            Err(self.errors.clone())
         }
     }
 
-    fn check_main_function(&self, errors: &mut AnalyserErrors) {
+    fn check_main_function(&mut self) {
         let main_fn = self.context.borrow().lookup("main");
         if main_fn.is_none() {
-            errors.push(AnalyserError::name_error(format!(
+            self.errors.push(AnalyserError::name_error(format!(
                 "Missing 'main' function"
             )));
             return;
@@ -52,18 +49,18 @@ impl Analyser {
 
         if let MetaObject::FnPrototype(fn_prototype) = main_fn.unwrap() {
             if fn_prototype.arity != 0 || fn_prototype.return_type != Type::Void {
-                errors.push(AnalyserError::type_error(format!(
+                self.errors.push(AnalyserError::type_error(format!(
                     "'main' function cannot accept args or return some value"
                 )));
             }
         } else {
-            errors.push(AnalyserError::name_error(format!(
+            self.errors.push(AnalyserError::name_error(format!(
                 "'main' must be declared as function"
             )));
         }
     }
 
-    fn analyse_statement(&mut self, stmt: &mut Statement) -> Result<(), AnalyserError> {
+    fn analyse_statement(&mut self, stmt: &mut Statement) {
         match stmt {
             Statement::If(block) => self.analyse_if_statement(block),
             Statement::Expression(expression) => self.analyse_expression(expression),
@@ -71,25 +68,25 @@ impl Analyser {
         }
     }
 
-    fn analyse_if_statement(&mut self, block: &mut BlockStatement) -> Result<(), AnalyserError> {
+    fn analyse_if_statement(&mut self, block: &mut BlockStatement) {
         if self.metastack.is_empty() {
-            return Err(AnalyserError::arg_error(format!(
+            self.errors.push(AnalyserError::arg_error(format!(
                 "'if' expects boolean value on top of the stack"
             )));
         }
         if Type::Boolean != self.metastack.pop().unwrap() {
-            return Err(AnalyserError::type_error(format!(
+            self.errors.push(AnalyserError::type_error(format!(
                 "'if' expects boolean value on top of the stack"
             )));
         }
 
         for stmt in block {
-            self.analyse_statement(stmt)?;
+            self.analyse_statement(stmt);
         }
 
         if self.metastack.is_empty() {
             if self.expected_type != Type::Void {
-                return Err(AnalyserError::type_error(format!(
+                self.errors.push(AnalyserError::type_error(format!(
                     "'if' block returns 'void' where '{}' is expected",
                     self.expected_type
                 )));
@@ -97,32 +94,27 @@ impl Analyser {
         } else {
             let provided_type = self.metastack.last().unwrap();
             if self.expected_type != *provided_type {
-                return Err(AnalyserError::type_error(format!(
+                self.errors.push(AnalyserError::type_error(format!(
                     "'if' block returns '{}' where '{}' is expected",
                     provided_type, self.expected_type
                 )));
             }
         }
-
-        Ok(())
     }
 
-    fn analyse_function_declaration(
-        &mut self,
-        fn_decl: &mut FunctionDeclaration,
-    ) -> Result<(), AnalyserError> {
+    fn analyse_function_declaration(&mut self, fn_decl: &mut FunctionDeclaration) {
         self.metastack.clear();
 
         // 1. check the scope where it's declared
         if self.context.borrow().type_ != ContextType::Global {
-            return Err(AnalyserError::illegal_decl(format!(
+            self.errors.push(AnalyserError::illegal_decl(format!(
                 "Functions must be only declared in global scope"
             )));
         }
 
         // 2. check if the name is already taken
         if self.context.borrow().is_declared(&fn_decl.name) {
-            return Err(AnalyserError::name_error(format!(
+            self.errors.push(AnalyserError::name_error(format!(
                 "'{}' is already bound",
                 &fn_decl.name
             )));
@@ -150,44 +142,49 @@ impl Analyser {
         self.expected_type = fn_decl.return_type.clone();
 
         for param in &fn_decl.params {
+            if let Some(_) = self.context.borrow().lookup(&param.name) {
+                self.errors.push(AnalyserError::name_error(format!(
+                    "Duplicated parameter name '{}' for function '{}'",
+                    param.name, fn_decl.name
+                )));
+            }
+
             self.context
                 .borrow_mut()
                 .declare(param.name.clone(), MetaObject::VarType(param.type_.clone()))
         }
 
         for stmt in &mut fn_decl.body {
-            if let Err(err) = self.analyse_statement(stmt) {
-                self.context = global_context;
-                return Err(err);
-            }
+            self.analyse_statement(stmt);
         }
 
         if self.metastack.is_empty() {
             if fn_decl.return_type != Type::Void {
                 self.context = global_context;
-                return Err(AnalyserError::type_error(format!(
+                self.errors.push(AnalyserError::type_error(format!(
                     "Missing return value for a non-void function '{}'",
                     &fn_decl.name
                 )));
+                return;
             }
         } else {
             let provided_type = self.metastack.pop().unwrap();
             if provided_type != fn_decl.return_type {
                 self.context = global_context;
-                return Err(AnalyserError::type_error(format!(
+                self.errors.push(AnalyserError::type_error(format!(
                     "Function '{}' expects return type {} but provided {}",
                     &fn_decl.name, fn_decl.return_type, provided_type
                 )));
+                return;
             }
         }
 
         self.context = global_context;
-        Ok(())
     }
 
-    fn analyse_expression(&mut self, expression: &mut Expression) -> Result<(), AnalyserError> {
+    fn analyse_expression(&mut self, expression: &mut Expression) {
         if self.context.borrow().type_ != ContextType::Function {
-            return Err(AnalyserError::out_fn_expr(format!(
+            self.errors.push(AnalyserError::out_fn_expr(format!(
                 "Expressions must be inside of functions"
             )));
         }
@@ -201,21 +198,21 @@ impl Analyser {
         }
     }
 
-    fn analyse_identifier(&mut self, ident: &mut String) -> Result<(), AnalyserError> {
+    fn analyse_identifier(&mut self, ident: &mut String) {
         let object = self.context.borrow().lookup(&ident);
         if object.is_none() {
-            return Err(AnalyserError::name_error(format!("'{}' is unbound", ident)));
+            self.errors
+                .push(AnalyserError::name_error(format!("'{}' is unbound", ident)));
         }
         match object.unwrap() {
             MetaObject::FnPrototype(_) => todo!(),
             MetaObject::VarType(type_) => self.metastack.push(type_),
         }
-        Ok(())
     }
 
-    fn analyse_binop(&mut self, binop: &mut BinaryOp) -> Result<(), AnalyserError> {
+    fn analyse_binop(&mut self, binop: &mut BinaryOp) {
         if self.metastack.len() < 2 {
-            return Err(AnalyserError::type_error(format!(
+            self.errors.push(AnalyserError::type_error(format!(
                 "Missing operands for '{}' operation",
                 binop
             )));
@@ -225,7 +222,7 @@ impl Analyser {
         let lhs = self.metastack.pop().unwrap();
 
         if rhs != lhs {
-            return Err(AnalyserError::type_error(format!(
+            self.errors.push(AnalyserError::type_error(format!(
                 "Operands of '{}' operation must be of same type, but provided '{}' and '{}'",
                 binop, lhs, rhs
             )));
@@ -237,42 +234,35 @@ impl Analyser {
                     *type_ = Some(Type::Integer);
                     self.metastack.push(lhs)
                 }
-                _ => {
-                    return Err(AnalyserError::type_error(format!(
-                        "'{}' operation not supported for '{}' type",
-                        binop, lhs
-                    )))
-                }
+                _ => self.errors.push(AnalyserError::type_error(format!(
+                    "'{}' operation not supported for '{}' type",
+                    binop, lhs
+                ))),
             },
             BinaryOp::GratherThan(type_) => match lhs {
                 Type::Integer => {
                     *type_ = Some(Type::Integer);
                     self.metastack.push(Type::Boolean);
                 }
-                _ => {
-                    return Err(AnalyserError::type_error(format!(
-                        "'{}' operation not supported for '{}' type",
-                        binop, lhs
-                    )))
-                }
+                _ => self.errors.push(AnalyserError::type_error(format!(
+                    "'{}' operation not supported for '{}' type",
+                    binop, lhs
+                ))),
             },
         }
-
-        Ok(())
     }
 
-    fn analyse_literal_expression(&mut self, literal: &mut Literal) -> Result<(), AnalyserError> {
+    fn analyse_literal_expression(&mut self, literal: &mut Literal) {
         match literal {
             Literal::Int(_) => self.metastack.push(Type::Integer),
             Literal::String(_) => self.metastack.push(Type::String),
         }
-        Ok(())
     }
 
-    fn analyse_function_call(&mut self, fn_name: &mut String) -> Result<(), AnalyserError> {
+    fn analyse_function_call(&mut self, fn_name: &mut String) {
         let func = self.context.borrow().lookup(&fn_name);
         if func.is_none() {
-            return Err(AnalyserError::name_error(format!(
+            self.errors.push(AnalyserError::name_error(format!(
                 "'{}' is unbound",
                 fn_name
             )));
@@ -280,15 +270,16 @@ impl Analyser {
         let prototype = match func.unwrap() {
             MetaObject::FnPrototype(prototype) => prototype,
             _ => {
-                return Err(AnalyserError::type_error(format!(
+                self.errors.push(AnalyserError::type_error(format!(
                     "'{}' is not callable",
                     fn_name
-                )))
+                )));
+                return;
             }
         };
 
         if (self.metastack.len() as u8) < prototype.arity {
-            return Err(AnalyserError::arg_error(format!(
+            self.errors.push(AnalyserError::arg_error(format!(
                 "Missing arguments for function '{}'",
                 fn_name
             )));
@@ -298,7 +289,7 @@ impl Analyser {
             prototype.argtypes.iter().zip(&self.metastack).enumerate()
         {
             if expected_type != provided_type {
-                return Err(AnalyserError::type_error(format!(
+                self.errors.push(AnalyserError::type_error(format!(
                     "The {} parameter of '{}' function expected to be of type '{}' but provided value of type '{}'",
                     index + 1,
                     fn_name,
@@ -312,12 +303,9 @@ impl Analyser {
         if prototype.return_type != Type::Void {
             self.metastack.push(prototype.return_type.clone());
         }
-
-        Ok(())
     }
 
-    fn analyse_return_expression(&mut self, type_: &mut Option<Type>) -> Result<(), AnalyserError> {
+    fn analyse_return_expression(&mut self, type_: &mut Option<Type>) {
         *type_ = Some(self.metastack.last().unwrap_or(&Type::Void).clone());
-        Ok(())
     }
 }

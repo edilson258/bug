@@ -1,6 +1,6 @@
 use core::fmt;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum AnalyserErrorKind {
     Type,
     Name,
@@ -21,6 +21,7 @@ impl fmt::Display for AnalyserErrorKind {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct AnalyserError {
     kind: AnalyserErrorKind,
     msg: String,
