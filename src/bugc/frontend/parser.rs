@@ -65,13 +65,34 @@ impl<'a> Parser<'a> {
 
     fn parse_statement(&mut self) -> Result<Statement, ParserError> {
         match self.curr_token {
-            Token::FunctionDeclarator => self.parse_function_declaration(),
             Token::If => self.parse_if_statement(),
+            Token::Equal => Ok(Statement::Assignment(None)),
+            Token::FunctionDeclarator => self.parse_function_declaration(),
+            Token::TypeString | Token::TypeInteger => self.parse_var_declaration(),
             _ => match self.parse_expression() {
                 Ok(expression) => Ok(Statement::Expression(expression)),
                 Err(err) => Err(err),
             },
         }
+    }
+
+    /// f main ->
+    ///   int age 22 =;
+    fn parse_var_declaration(&mut self) -> Result<Statement, ParserError> {
+        let var_type = match &self.curr_token {
+            Token::TypeString => Type::String,
+            Token::TypeInteger => Type::Integer,
+            x => return Err(format!("Cannot declare variable with prefix '{}'", x)),
+        };
+        self.bump()?;
+        let var_name = match &self.curr_token {
+            Token::Identifier(ref name) => name.clone(),
+            x => return Err(format!("Cannot declare variable with name '{}'", x)),
+        };
+        Ok(Statement::VariableDeclaration(VariableDeclaration {
+            type_: var_type,
+            name: var_name,
+        }))
     }
 
     fn parse_if_statement(&mut self) -> Result<Statement, ParserError> {

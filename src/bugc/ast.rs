@@ -4,13 +4,21 @@ use bug::Type;
 
 #[derive(Debug)]
 pub enum Statement {
+    Assignment(Option<String>),
     If(BlockStatement),
     Expression(Expression),
+    VariableDeclaration(VariableDeclaration),
     FunctionDeclaration(FunctionDeclaration),
 }
 
 pub type BlockStatement = Vec<Statement>;
 pub type AST = BlockStatement;
+
+#[derive(Debug)]
+pub struct VariableDeclaration {
+    pub type_: Type,
+    pub name: String,
+}
 
 #[derive(Debug)]
 pub struct FnParam {

@@ -29,6 +29,7 @@ pub enum Token {
     TypeString,
 
     GratherThan,
+    Equal,
 }
 
 impl fmt::Display for Token {
@@ -53,6 +54,7 @@ impl fmt::Display for Token {
             Self::If => write!(f, "if"),
             Self::GratherThan => write!(f, ">"),
             Self::Return => write!(f, "return"),
+            Self::Equal => write!(f, "="),
         }
     }
 }

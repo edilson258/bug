@@ -61,10 +61,25 @@ impl CodeGenerator {
 
     fn generate_statement(&mut self, stmt: Statement) {
         match stmt {
+            Statement::If(block) => self.generate_if_statement(block),
             Statement::Expression(expr) => self.generate_expression(expr),
             Statement::FunctionDeclaration(fn_decl) => self.generate_function_declaration(fn_decl),
-            Statement::If(block) => self.generate_if_statement(block),
+            Statement::VariableDeclaration(var_decl) => {
+                self.generate_variable_declaration(var_decl)
+            }
+            Statement::Assignment(target) => {
+                self.context.bytecode.push(Opcode::LStore(
+                    self.context.locals.get(&target.unwrap()).unwrap().index,
+                ));
+            }
         }
+    }
+
+    fn generate_variable_declaration(&mut self, var_decl: VariableDeclaration) {
+        self.context.locals.insert(
+            var_decl.name,
+            Local::make(self.context.locals.len(), var_decl.type_),
+        );
     }
 
     fn generate_if_statement(&mut self, block: BlockStatement) {
@@ -100,7 +115,7 @@ impl CodeGenerator {
             DefinedFn {
                 arity,
                 code: self.context.bytecode.clone(),
-                max_locals: arity,
+                max_locals: self.context.locals.len(),
             },
         );
     }
@@ -122,7 +137,7 @@ impl CodeGenerator {
             .get(&ident)
             .expect(&format!("Expected '{}' to a local", &ident));
         match local.type_ {
-            Type::Integer => self.context.bytecode.push(Opcode::ILoad(local.index)),
+            Type::Integer | Type::String => self.context.bytecode.push(Opcode::LLoad(local.index)),
             _ => unreachable!(),
         };
     }
