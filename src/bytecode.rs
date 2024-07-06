@@ -26,10 +26,10 @@ pub enum Opcode {
     JumpIfFalse(usize),
     /// Will Load a value from constant pool at provided index to the stack
     Ldc(usize),
-    /// Will load an int from locals at provided index to the stack
-    ILoad(usize),
-    /// Will move an int from top of the stack to the locals at provided index
-    IStore(usize),
+    /// Will load a value from locals at provided index to the stack
+    LLoad(usize),
+    /// Will move a value from top of the stack to the locals at provided index
+    LStore(usize),
     /// Will push an imediate int to the stack
     Bipush(i32),
 }
@@ -76,8 +76,8 @@ impl fmt::Display for Opcode {
             Self::Return => write!(f, "[return]"),
             Self::IReturn => write!(f, "[ireturn]"),
             Self::Invoke(name) => write!(f, "[invoke] {}", name),
-            Self::ILoad(index) => write!(f, "[iload] {}", index),
-            Self::IStore(index) => write!(f, "[istore] {}", index),
+            Self::LLoad(index) => write!(f, "[iload] {}", index),
+            Self::LStore(index) => write!(f, "[istore] {}", index),
             Self::Bipush(iconst) => write!(f, "[bipush] {}", iconst),
             Self::IMul => write!(f, "[imul]"),
             Self::IDiv => write!(f, "[idiv]"),

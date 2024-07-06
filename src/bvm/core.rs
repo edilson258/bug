@@ -24,10 +24,10 @@ impl Runtime {
                 Opcode::IAdd => Self::iadd(&mut current_frame),
                 Opcode::IMul => Self::imul(&mut current_frame),
                 Opcode::IDiv => Self::idiv(&mut current_frame),
-                Opcode::ILoad(index) => current_frame
+                Opcode::LLoad(index) => current_frame
                     .stack
                     .push(current_frame.locals.get_by_index(index)),
-                Opcode::IStore(index) => current_frame
+                Opcode::LStore(index) => current_frame
                     .locals
                     .store_at(index, current_frame.stack.pop().unwrap()),
                 Opcode::Invoke(name) => {
