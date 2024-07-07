@@ -1,0 +1,5 @@
+f main ->
+  int year 2024 =
+  str message "Hello, Buggers!" =
+  year .write message .write;
+
