@@ -60,6 +60,7 @@ impl<'a> Lexer<'a> {
             ',' => Some(Token::Comma),
             '.' => Some(Token::Dot),
             '>' => Some(Token::GratherThan),
+            '=' => Some(Token::Equal),
             '-' => {
                 if self.next_char_is('>') {
                     self.read_char();

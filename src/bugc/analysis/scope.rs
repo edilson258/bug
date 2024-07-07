@@ -12,33 +12,36 @@ pub enum MetaObject {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum ContextType {
+pub enum ScopeType {
     Global,
     Function,
 }
 
-pub struct Context {
-    pub type_: ContextType,
+pub struct Scope {
+    pub type_: ScopeType,
+    pub expected_type: Type,
     store: HashMap<String, MetaObject>,
-    parent: Option<Rc<RefCell<Context>>>,
+    parent: Option<Rc<RefCell<Scope>>>,
 }
 
-impl Context {
+impl Scope {
     pub fn make_global() -> Self {
         let mut store: HashMap<String, MetaObject> = HashMap::new();
         for (name, native_fn) in list_native_fns() {
             store.insert(name, MetaObject::FnPrototype(native_fn.prototype));
         }
         Self {
-            type_: ContextType::Global,
+            type_: ScopeType::Global,
             store,
             parent: None,
+            expected_type: Type::Void,
         }
     }
 
-    pub fn make(type_: ContextType, parent: Rc<RefCell<Context>>) -> Self {
+    pub fn make(type_: ScopeType, expected_type: Type, parent: Rc<RefCell<Scope>>) -> Self {
         Self {
             type_,
+            expected_type,
             store: HashMap::new(),
             parent: Some(parent),
         }

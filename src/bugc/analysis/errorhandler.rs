@@ -1,12 +1,11 @@
 use core::fmt;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum AnalyserErrorKind {
     Type,
     Name,
     Argument,
     IllegalDeclaration,
-    OutsideFunctionExpression,
 }
 
 impl fmt::Display for AnalyserErrorKind {
@@ -16,11 +15,11 @@ impl fmt::Display for AnalyserErrorKind {
             Self::Name => write!(f, "[Name Error]"),
             Self::Argument => write!(f, "[Argument Error]"),
             Self::IllegalDeclaration => write!(f, "[Illegal Declaration]"),
-            Self::OutsideFunctionExpression => write!(f, "[Outside function expression]"),
         }
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct AnalyserError {
     kind: AnalyserErrorKind,
     msg: String,
@@ -51,13 +50,6 @@ impl AnalyserError {
     pub fn illegal_decl(msg: String) -> Self {
         Self {
             kind: AnalyserErrorKind::IllegalDeclaration,
-            msg,
-        }
-    }
-
-    pub fn out_fn_expr(msg: String) -> Self {
-        Self {
-            kind: AnalyserErrorKind::OutsideFunctionExpression,
             msg,
         }
     }
