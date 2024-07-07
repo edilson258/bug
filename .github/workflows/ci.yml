@@ -1,0 +1,24 @@
+name: Rust CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build Bug Compiler
+      run: cargo build --release --bin bugc
+    - name: Build Bug Virtual Machine
+      run: cargo build --release --bin bvm
+    - uses: actions/upload-artifact@v4
+      with:
+        name: x86_64-bugc
+        path: target/release/bugc
+        name: x86_64-bvm
+        path: target/release/bvm
+
