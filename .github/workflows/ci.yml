@@ -19,6 +19,8 @@ jobs:
       with:
         name: x86_64-bugc
         path: target/release/bugc
+    - uses: actions/upload-artifact@v4
+      with:
         name: x86_64-bvm
         path: target/release/bvm
 
