@@ -152,3 +152,36 @@ impl<'a> Lexer<'a> {
         self.input[self.read_pos] == x
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Lexer;
+    use crate::frontend::Token;
+
+    #[test]
+    fn missing_unquote_to_balance_string_literal() {
+        // "Hello world!
+        let input = "\"Hello world!";
+        let input = input.chars().collect::<Vec<char>>();
+        let mut l = Lexer::new(&input);
+        assert_eq!(Err("Unbalanced '\"'".to_string()), l.next_token());
+    }
+
+    #[test]
+    fn test_next_token() {
+        let input = "f main -> \"Hello, world!\" .write;";
+        let input = input.chars().collect::<Vec<char>>();
+        let mut l = Lexer::new(&input);
+        assert_eq!(Ok(Token::FunctionDeclarator), l.next_token());
+        assert_eq!(Ok(Token::Identifier("main".to_string())), l.next_token());
+        assert_eq!(Ok(Token::Arrow), l.next_token());
+        assert_eq!(
+            Ok(Token::String("Hello, world!".to_string())),
+            l.next_token()
+        );
+        assert_eq!(Ok(Token::Dot), l.next_token());
+        assert_eq!(Ok(Token::Identifier("write".to_string())), l.next_token());
+        assert_eq!(Ok(Token::Semicolon), l.next_token());
+        assert_eq!(Ok(Token::Eof), l.next_token());
+    }
+}

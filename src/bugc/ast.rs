@@ -2,7 +2,7 @@ use core::fmt;
 
 use bug::Type;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Statement {
     Assignment(Option<String>),
     If(BlockStatement),
@@ -14,13 +14,13 @@ pub enum Statement {
 pub type BlockStatement = Vec<Statement>;
 pub type AST = BlockStatement;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct VariableDeclaration {
     pub type_: Type,
     pub name: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct FnParam {
     pub name: String,
     pub type_: Type,
@@ -28,7 +28,7 @@ pub struct FnParam {
 
 pub type FnParams = Vec<FnParam>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FunctionDeclaration {
     pub name: String,
     pub params: FnParams,
@@ -36,7 +36,7 @@ pub struct FunctionDeclaration {
     pub body: BlockStatement,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Expression {
     Identifier(String),
     Literal(Literal),
@@ -45,13 +45,13 @@ pub enum Expression {
     Return(Option<Type>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Literal {
     Int(i32),
     String(String),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum BinaryOp {
     Plus(Option<Type>),
     GratherThan(Option<Type>),

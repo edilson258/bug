@@ -76,8 +76,6 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// f main ->
-    ///   int age 22 =;
     fn parse_var_declaration(&mut self) -> Result<Statement, ParserError> {
         let var_type = match &self.curr_token {
             Token::TypeString => Type::String,
@@ -214,6 +212,153 @@ impl<'a> Parser<'a> {
         match &self.curr_token {
             Token::Identifier(ref fn_name) => Ok(Expression::FunctionCall(fn_name.clone())),
             _ => Err(format!("Missing function's name")),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Parser, Statement};
+    use crate::frontend::{
+        lexer::Lexer,
+        parser::{BinaryOp, Expression, FnParam, Literal},
+    };
+    use bug::Type;
+
+    #[test]
+    fn missing_function_name_on_call() {
+        let input = ".";
+        let input = input.chars().collect::<Vec<char>>();
+        let mut l = Lexer::new(&input);
+        let mut p = Parser::new(&mut l);
+        match p.parse() {
+            Err(_) => {}
+            Ok(_) => panic!("Expected error: Missing function's name of call expression"),
+        };
+    }
+
+    #[test]
+    fn ensure_function_is_well_declared() {
+        let input = "f double(int x) int -> x x +;";
+
+        let input = input.chars().collect::<Vec<char>>();
+        let mut l = Lexer::new(&input);
+        let mut p = Parser::new(&mut l);
+
+        let fn_decl = match p.parse() {
+            Ok(x) => x[0].clone(),
+            Err(e) => panic!("{}", e),
+        };
+        let fn_decl = match fn_decl {
+            Statement::FunctionDeclaration(fn_decl) => fn_decl,
+            _ => panic!("Expected a function declaration node"),
+        };
+
+        assert_eq!(
+            "double".to_string(),
+            fn_decl.name,
+            "Function name must be 'double'"
+        );
+        assert_eq!(
+            Type::Integer,
+            fn_decl.return_type,
+            "Return type must be Integer"
+        );
+        assert_eq!(3, fn_decl.body.len(), "Function body must has 3 statements");
+
+        let expected_param_list = vec![FnParam {
+            name: "x".to_string(),
+            type_: Type::Integer,
+        }];
+
+        assert_eq!(expected_param_list.len(), fn_decl.params.len());
+
+        expected_param_list.iter().zip(fn_decl.params).for_each(
+            |(expected_param, provided_param)| assert_eq!(*expected_param, provided_param),
+        );
+
+        match fn_decl.body[0].clone() {
+            Statement::Expression(Expression::Identifier(x)) => {
+                assert_eq!("x".to_string(), x)
+            }
+            _ => panic!("First statement must be Identifier 'x'"),
+        }
+
+        match fn_decl.body[1].clone() {
+            Statement::Expression(Expression::Identifier(x)) => {
+                assert_eq!("x".to_string(), x)
+            }
+            _ => panic!("Second statement must be Identifier 'x'"),
+        }
+
+        match fn_decl.body[2].clone() {
+            Statement::Expression(Expression::BinaryOp(BinaryOp::Plus(_))) => {}
+            _ => panic!("Last statement must be BinaryOp 'plus'"),
+        }
+    }
+
+    #[test]
+    fn ensure_call_is_well_formed() {
+        let input = ".sum";
+
+        let input = input.chars().collect::<Vec<char>>();
+        let mut l = Lexer::new(&input);
+        let mut p = Parser::new(&mut l);
+
+        let ast = match p.parse() {
+            Ok(ast) => ast,
+            Err(e) => panic!("{}", e),
+        };
+
+        assert_eq!(1, ast.len());
+
+        match ast[0].clone() {
+            Statement::Expression(Expression::FunctionCall(callee)) => {
+                assert_eq!("sum", &callee)
+            }
+            x => panic!("Expected function call expression, but got {:#?}", x),
+        }
+    }
+
+    #[test]
+    fn ensure_int_literal_expression_is_well_formed() {
+        let input = "69";
+
+        let input = input.chars().collect::<Vec<char>>();
+        let mut l = Lexer::new(&input);
+        let mut p = Parser::new(&mut l);
+
+        let ast = match p.parse() {
+            Ok(ast) => ast,
+            Err(e) => panic!("{}", e),
+        };
+
+        assert_eq!(1, ast.len());
+
+        match ast[0].clone() {
+            Statement::Expression(Expression::Literal(Literal::Int(69))) => {}
+            _ => panic!("Expected int literal expression '69'"),
+        }
+    }
+
+    #[test]
+    fn ensure_str_literal_expression_is_well_formed() {
+        let input = "\"Hi\"";
+
+        let input = input.chars().collect::<Vec<char>>();
+        let mut l = Lexer::new(&input);
+        let mut p = Parser::new(&mut l);
+
+        let ast = match p.parse() {
+            Ok(ast) => ast,
+            Err(e) => panic!("{}", e),
+        };
+
+        assert_eq!(1, ast.len());
+
+        match ast[0].clone() {
+            Statement::Expression(Expression::Literal(Literal::String(x))) => assert_eq!("Hi", &x),
+            _ => panic!("Expected int literal expression '69'"),
         }
     }
 }
