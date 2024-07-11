@@ -64,18 +64,18 @@ impl CodeGenerator {
             Statement::If(block) => self.generate_if_statement(block),
             Statement::Expression(expr) => self.generate_expression(expr),
             Statement::FunctionDeclaration(fn_decl) => self.generate_function_declaration(fn_decl),
-            Statement::VariableDeclaration(var_decl) => {
-                self.generate_variable_declaration(var_decl)
-            }
-            Statement::Assignment(target) => {
-                self.context.bytecode.push(Opcode::LStore(
-                    self.context.locals.get(&target.unwrap()).unwrap().index,
-                ));
-            }
+            Statement::VariableDeclaration(var_decl) => self.generate_variable_decl(var_decl),
+            Statement::Assignment(target) => self.generate_assignment(target),
         }
     }
 
-    fn generate_variable_declaration(&mut self, var_decl: VariableDeclaration) {
+    fn generate_assignment(&mut self, target: Option<String>) {
+        self.context.bytecode.push(Opcode::LStore(
+            self.context.locals.get(&target.unwrap()).unwrap().index,
+        ));
+    }
+
+    fn generate_variable_decl(&mut self, var_decl: VariableDeclaration) {
         self.context.locals.insert(
             var_decl.name,
             Local::make(self.context.locals.len(), var_decl.type_),
@@ -174,5 +174,54 @@ impl CodeGenerator {
             Type::Integer => self.context.bytecode.push(Opcode::IReturn),
             _ => unimplemented!(),
         };
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bug::Type;
+
+    #[test]
+    fn enaure_hello_world_is_well_generated() {
+        let ast = vec![Statement::FunctionDeclaration(FunctionDeclaration {
+            name: "main".to_string(),
+            params: vec![],
+            return_type: Type::Void,
+            body: vec![
+                Statement::Expression(Expression::Literal(Literal::String(
+                    "Hello, world!".to_string(),
+                ))),
+                Statement::Expression(Expression::FunctionCall("write".to_string())),
+            ],
+        })];
+
+        let mut generator = CodeGenerator::make();
+        let program = generator.gen(ast);
+
+        assert!(program.fns.contains_key("main"));
+        assert!(program
+            .pool
+            .entries
+            .contains(&PoolEntry::Object(Object::String(
+                "Hello, world!".to_string()
+            ))));
+
+        let main_instructions = program.fns.get("main").unwrap().code.instrs.clone();
+
+        match &main_instructions[0] {
+            Opcode::Ldc(_) => {}
+            x => panic!("Unexpected instruction {}", x),
+        }
+
+        match &main_instructions[1] {
+            Opcode::Invoke(_) => {}
+            x => panic!("Unexpected instruction {}", x),
+        }
+
+        match &main_instructions[2] {
+            Opcode::Return => {}
+            x => panic!("Unexpected instruction {}", x),
+        }
     }
 }
