@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::ast::*;
-use bug::bytecode::{Bytecode, Opcode};
+use bug::bytecode::{Bytecode, Opcode, PushOperand};
 use bug::{DefinedFn, Object, Pool, PoolEntry, Program, Type};
 
 struct Context {
@@ -137,7 +137,9 @@ impl CodeGenerator {
             .get(&ident)
             .expect(&format!("Expected '{}' to a local", &ident));
         match local.type_ {
-            Type::Integer | Type::String => self.context.bytecode.push(Opcode::LLoad(local.index)),
+            Type::Integer | Type::Boolean | Type::String => {
+                self.context.bytecode.push(Opcode::LLoad(local.index))
+            }
             _ => unreachable!(),
         };
     }
@@ -161,7 +163,14 @@ impl CodeGenerator {
 
     fn generate_literal(&mut self, literal: Literal) {
         match literal {
-            Literal::Int(x) => self.context.bytecode.push(Opcode::Bipush(x)),
+            Literal::Int(x) => self
+                .context
+                .bytecode
+                .push(Opcode::Push(PushOperand::Integer(x))),
+            Literal::Boolean(x) => self
+                .context
+                .bytecode
+                .push(Opcode::Push(PushOperand::Boolean(x))),
             Literal::String(x) => self.context.bytecode.push(Opcode::Ldc(
                 self.pool.append(PoolEntry::Object(Object::String(x))),
             )),

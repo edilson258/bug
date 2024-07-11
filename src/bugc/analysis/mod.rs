@@ -361,6 +361,7 @@ impl Analyser {
         match literal {
             Literal::Int(_) => self.metastack.push(MetaStackEntry::Type(Type::Integer)),
             Literal::String(_) => self.metastack.push(MetaStackEntry::Type(Type::String)),
+            Literal::Boolean(_) => self.metastack.push(MetaStackEntry::Type(Type::Boolean)),
         }
     }
 

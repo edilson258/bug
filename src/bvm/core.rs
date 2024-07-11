@@ -1,7 +1,7 @@
 use crate::frame::Frame;
 use crate::stack::Stack;
 
-use bug::bytecode::Opcode;
+use bug::bytecode::{Opcode, PushOperand};
 use bug::stdlib::list_native_fns;
 use bug::{Object, PoolEntry, Program};
 
@@ -84,7 +84,14 @@ impl Runtime {
                         current_frame.pc = offset;
                     }
                 }
-                Opcode::Bipush(iconst) => current_frame.stack.push(Object::Int(iconst)),
+                Opcode::Push(val) => match val {
+                    PushOperand::Integer(x) => {
+                        current_frame.stack.push(Object::Int(x));
+                    }
+                    PushOperand::Boolean(x) => {
+                        current_frame.stack.push(Object::Boolean(x));
+                    }
+                },
                 Opcode::Ldc(index) => match program.pool.entries[index] {
                     PoolEntry::Object(ref object) => current_frame.stack.push(object.clone()),
                 },

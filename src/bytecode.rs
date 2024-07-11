@@ -4,6 +4,21 @@ use std::{process::exit, usize};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum PushOperand {
+    Integer(i32),
+    Boolean(bool),
+}
+
+impl fmt::Display for PushOperand {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Integer(x) => write!(f, "{}", x),
+            Self::Boolean(x) => write!(f, "{}", x),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Opcode {
     /// Will do nothing for a cycle
     Nop,
@@ -30,8 +45,8 @@ pub enum Opcode {
     LLoad(usize),
     /// Will move a value from top of the stack to the locals at provided index
     LStore(usize),
-    /// Will push an imediate int to the stack
-    Bipush(i32),
+    /// Will push an imediate value to the stack
+    Push(PushOperand),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -78,7 +93,7 @@ impl fmt::Display for Opcode {
             Self::Invoke(name) => write!(f, "[invoke] {}", name),
             Self::LLoad(index) => write!(f, "[iload] {}", index),
             Self::LStore(index) => write!(f, "[istore] {}", index),
-            Self::Bipush(iconst) => write!(f, "[bipush] {}", iconst),
+            Self::Push(iconst) => write!(f, "[bipush] {}", iconst),
             Self::IMul => write!(f, "[imul]"),
             Self::IDiv => write!(f, "[idiv]"),
             Self::Ldc(usize) => write!(f, "[ldc] {}", usize),

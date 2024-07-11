@@ -68,7 +68,9 @@ impl<'a> Parser<'a> {
             Token::If => self.parse_if_statement(),
             Token::Equal => Ok(Statement::Assignment(None)),
             Token::FunctionDeclarator => self.parse_function_declaration(),
-            Token::TypeString | Token::TypeInteger => self.parse_var_declaration(),
+            Token::TypeString | Token::TypeInteger | Token::TypeBoolean => {
+                self.parse_var_declaration()
+            }
             _ => match self.parse_expression() {
                 Ok(expression) => Ok(Statement::Expression(expression)),
                 Err(err) => Err(err),
@@ -80,6 +82,7 @@ impl<'a> Parser<'a> {
         let var_type = match &self.curr_token {
             Token::TypeString => Type::String,
             Token::TypeInteger => Type::Integer,
+            Token::TypeBoolean => Type::Boolean,
             x => return Err(format!("Cannot declare variable with prefix '{}'", x)),
         };
         self.bump()?;
@@ -199,6 +202,8 @@ impl<'a> Parser<'a> {
             Token::Int(x) => Ok(Expression::Literal(Literal::Int(x))),
             Token::String(ref x) => Ok(Expression::Literal(Literal::String(x.clone()))),
             Token::Identifier(ref identifier) => Ok(Expression::Identifier(identifier.clone())),
+            Token::True => Ok(Expression::Literal(Literal::Boolean(true))),
+            Token::False => Ok(Expression::Literal(Literal::Boolean(false))),
             Token::Dot => self.parse_function_call(),
             Token::Plus => Ok(Expression::BinaryOp(BinaryOp::Plus(None))),
             Token::GratherThan => Ok(Expression::BinaryOp(BinaryOp::GratherThan(None))),

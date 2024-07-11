@@ -27,6 +27,10 @@ pub enum Token {
 
     TypeInteger,
     TypeString,
+    TypeBoolean,
+
+    True,
+    False,
 
     GratherThan,
     Equal,
@@ -50,11 +54,14 @@ impl fmt::Display for Token {
             Self::FunctionDeclarator => write!(f, "[Function declaration] f"),
             Self::TypeInteger => write!(f, "int"),
             Self::TypeString => write!(f, "str"),
+            Self::TypeBoolean => write!(f, "bool"),
             Self::Comma => write!(f, ","),
             Self::If => write!(f, "if"),
             Self::GratherThan => write!(f, ">"),
             Self::Return => write!(f, "return"),
             Self::Equal => write!(f, "="),
+            Self::True => write!(f, "true"),
+            Self::False => write!(f, "false"),
         }
     }
 }

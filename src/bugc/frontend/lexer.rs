@@ -104,6 +104,9 @@ impl<'a> Lexer<'a> {
             "str" => Token::TypeString,
             "if" => Token::If,
             "return" => Token::Return,
+            "bool" => Token::TypeBoolean,
+            "true" => Token::True,
+            "false" => Token::False,
             _ => Token::Identifier(literal),
         }
     }
