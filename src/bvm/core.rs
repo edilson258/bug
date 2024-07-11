@@ -14,9 +14,6 @@ impl Runtime {
         let mut framestack: Stack<Frame> = Stack::make();
         let mut current_frame = Frame::make(main_fn.code.clone(), main_fn.max_locals);
 
-        // registers
-        let mut bflag: bool = false;
-
         loop {
             let instr = current_frame.fetch_next_instr();
             match instr {
@@ -70,16 +67,22 @@ impl Runtime {
                 Opcode::ICmpGT => {
                     let (lhs, rhs) = Self::ipop_two(&mut current_frame);
                     if lhs > rhs {
-                        bflag = true
+                        current_frame.stack.push(Object::Boolean(true));
                     } else {
-                        bflag = false
+                        current_frame.stack.push(Object::Boolean(false));
                     }
                 }
                 Opcode::JumpIfFalse(offset) => {
-                    if bflag == true {
-                        continue;
+                    let val = match current_frame.stack.pop().unwrap() {
+                        Object::Boolean(val) => val,
+                        unexpected => panic!(
+                            "Expected boolean, got {} for 'JumpIfFalse' opcode",
+                            unexpected
+                        ),
+                    };
+                    if val == false {
+                        current_frame.pc = offset;
                     }
-                    current_frame.pc = offset;
                 }
                 Opcode::Bipush(iconst) => current_frame.stack.push(Object::Int(iconst)),
                 Opcode::Ldc(index) => match program.pool.entries[index] {

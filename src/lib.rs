@@ -38,6 +38,7 @@ pub struct FnPrototype {
 pub enum Object {
     Int(i32),
     String(String),
+    Boolean(bool),
 }
 
 impl fmt::Display for Object {
@@ -45,6 +46,7 @@ impl fmt::Display for Object {
         match self {
             Self::Int(x) => write!(f, "{}", x),
             Self::String(x) => write!(f, "{}", x),
+            Self::Boolean(x) => write!(f, "{}", x),
         }
     }
 }
