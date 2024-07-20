@@ -169,12 +169,23 @@ impl Analyser {
         for stmt in consequence {
             self.analyse_statement(stmt);
         }
+        self.analyse_return_after_block("if");
 
+        if alternative.is_some() {
+            for stmt in alternative.as_mut().unwrap() {
+                self.analyse_statement(stmt);
+            }
+            self.analyse_return_after_block("else");
+        }
+    }
+
+    fn analyse_return_after_block(&mut self, block_name: &str) {
         if self.metastack.is_empty() {
             if self.scope.borrow().expected_type != Type::Void {
                 self.errors.push(AnalyserError::type_error(format!(
-                    "'if' block returns 'void' where '{}' is expected",
-                    self.scope.borrow().expected_type
+                    "'{}' block returns 'void' where '{}' is expected",
+                    self.scope.borrow().expected_type,
+                    block_name
                 )));
             }
         } else {
@@ -185,40 +196,10 @@ impl Analyser {
             };
             if self.scope.borrow().expected_type != provided_type {
                 self.errors.push(AnalyserError::type_error(format!(
-                    "'if' block returns '{}' where '{}' is expected",
+                    "'{}' block returns '{}' where '{}' is expected",
                     provided_type,
-                    self.scope.borrow().expected_type
-                )));
-            }
-        }
-
-        if alternative.is_none() {
-            return;
-        }
-
-        for stmt in alternative.as_mut().unwrap() {
-            self.analyse_statement(stmt);
-        }
-
-        // TODO: avoid code repitition, same as above if statement
-        if self.metastack.is_empty() {
-            if self.scope.borrow().expected_type != Type::Void {
-                self.errors.push(AnalyserError::type_error(format!(
-                    "'else' block returns 'void' where '{}' is expected",
-                    self.scope.borrow().expected_type
-                )));
-            }
-        } else {
-            let provided_type = match self.metastack.pop().unwrap() {
-                MetaStackEntry::Type(type_) => type_,
-                MetaStackEntry::Identifier(_, type_) => type_,
-                MetaStackEntry::VariableDeclaration(_, _) => Type::Void,
-            };
-            if self.scope.borrow().expected_type != provided_type {
-                self.errors.push(AnalyserError::type_error(format!(
-                    "'else' block returns '{}' where '{}' is expected",
-                    provided_type,
-                    self.scope.borrow().expected_type
+                    self.scope.borrow().expected_type,
+                    block_name
                 )));
             }
         }
