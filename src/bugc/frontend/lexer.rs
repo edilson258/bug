@@ -103,6 +103,7 @@ impl<'a> Lexer<'a> {
             "int" => Token::TypeInteger,
             "str" => Token::TypeString,
             "if" => Token::If,
+            "else" => Token::Else,
             "return" => Token::Return,
             "bool" => Token::TypeBoolean,
             "true" => Token::True,

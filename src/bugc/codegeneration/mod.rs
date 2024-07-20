@@ -53,6 +53,7 @@ impl CodeGenerator {
         for stmt in ast {
             self.generate_statement(stmt);
         }
+        println!("{:#?}", self.fns);
         Program {
             pool: self.pool.to_owned(),
             fns: self.fns.to_owned(),
@@ -61,7 +62,9 @@ impl CodeGenerator {
 
     fn generate_statement(&mut self, stmt: Statement) {
         match stmt {
-            Statement::If(block) => self.generate_if_statement(block),
+            Statement::If(consequence, alternative) => {
+                self.generate_if_statement(consequence, alternative)
+            }
             Statement::Expression(expr) => self.generate_expression(expr),
             Statement::FunctionDeclaration(fn_decl) => self.generate_function_declaration(fn_decl),
             Statement::VariableDeclaration(var_decl) => self.generate_variable_decl(var_decl),
@@ -82,16 +85,37 @@ impl CodeGenerator {
         );
     }
 
-    fn generate_if_statement(&mut self, block: BlockStatement) {
-        // Adding "No operation" as placeholder to substitute later with a "JumpIfFalse" op
-        let nop_index = self.context.bytecode.instrs.len();
-        self.context.bytecode.push(Opcode::Nop);
+    fn generate_if_statement(
+        &mut self,
+        consequence: BlockStatement,
+        alternative: Option<BlockStatement>,
+    ) {
+        if alternative.is_none() {
+            // Adding "No operation" as placeholder to substitute later with a "JumpIfFalse" op
+            let nop_index = self.context.bytecode.instrs.len();
+            self.context.bytecode.push(Opcode::Nop);
 
-        for stmt in block {
-            self.generate_statement(stmt);
+            for stmt in consequence {
+                self.generate_statement(stmt);
+            }
+            let after_if_block = self.context.bytecode.instrs.len();
+            self.context.bytecode.instrs[nop_index] = Opcode::JumpIfFalse(after_if_block);
+        } else {
+            let before_if_offset = self.context.bytecode.instrs.len();
+            self.context.bytecode.push(Opcode::Nop);
+            for stmt in consequence {
+                self.generate_statement(stmt);
+            }
+            let after_if_offset = self.context.bytecode.instrs.len();
+            self.context.bytecode.push(Opcode::Nop);
+            for stmt in alternative.unwrap() {
+                self.generate_statement(stmt);
+            }
+            let after_else_offset = self.context.bytecode.instrs.len();
+            self.context.bytecode.instrs[before_if_offset] =
+                Opcode::JumpIfFalse(after_if_offset + 1);
+            self.context.bytecode.instrs[after_if_offset] = Opcode::Jump(after_else_offset);
         }
-        let after_if_block = self.context.bytecode.instrs.len();
-        self.context.bytecode.instrs[nop_index] = Opcode::JumpIfFalse(after_if_block);
     }
 
     fn generate_function_declaration(&mut self, fn_decl: FunctionDeclaration) {

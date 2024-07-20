@@ -99,8 +99,16 @@ impl<'a> Parser<'a> {
     fn parse_if_statement(&mut self) -> Result<Statement, ParserError> {
         self.bump_expected(Token::If)?;
         self.bump_expected(Token::Arrow)?;
-        let block = self.parse_block_statement()?;
-        Ok(Statement::If(block))
+        let if_block = self.parse_block_statement()?;
+        if let Token::Else = self.next_token {
+            self.bump_expected(Token::Semicolon)?;
+            self.bump_expected(Token::Else)?;
+            self.bump_expected(Token::Arrow)?;
+            let else_block = self.parse_block_statement()?;
+            Ok(Statement::If(if_block, Some(else_block)))
+        } else {
+            Ok(Statement::If(if_block, None))
+        }
     }
 
     fn parse_function_declaration(&mut self) -> Result<Statement, ParserError> {

@@ -67,7 +67,9 @@ impl Analyser {
 
     fn analyse_statement(&mut self, stmt: &mut Statement) {
         match stmt {
-            Statement::If(block) => self.analyse_if_statement(block),
+            Statement::If(consequence, alternative) => {
+                self.analyse_if_statement(consequence, alternative)
+            }
             Statement::Expression(expression) => self.analyse_expression(expression),
             Statement::FunctionDeclaration(fn_decl) => self.analyse_function_declaration(fn_decl),
             Statement::VariableDeclaration(var_decl) => self.analyse_variable_declaration(var_decl),
@@ -134,7 +136,11 @@ impl Analyser {
         ));
     }
 
-    fn analyse_if_statement(&mut self, block: &mut BlockStatement) {
+    fn analyse_if_statement(
+        &mut self,
+        consequence: &mut BlockStatement,
+        alternative: &mut Option<BlockStatement>,
+    ) {
         if self.metastack.is_empty() {
             self.errors.push(AnalyserError::arg_error(format!(
                 "'if' expects boolean value on top of the stack"
@@ -160,7 +166,7 @@ impl Analyser {
             return;
         }
 
-        for stmt in block {
+        for stmt in consequence {
             self.analyse_statement(stmt);
         }
 
@@ -180,6 +186,37 @@ impl Analyser {
             if self.scope.borrow().expected_type != provided_type {
                 self.errors.push(AnalyserError::type_error(format!(
                     "'if' block returns '{}' where '{}' is expected",
+                    provided_type,
+                    self.scope.borrow().expected_type
+                )));
+            }
+        }
+
+        if alternative.is_none() {
+            return;
+        }
+
+        for stmt in alternative.as_mut().unwrap() {
+            self.analyse_statement(stmt);
+        }
+
+        // TODO: avoid code repitition, same as above if statement
+        if self.metastack.is_empty() {
+            if self.scope.borrow().expected_type != Type::Void {
+                self.errors.push(AnalyserError::type_error(format!(
+                    "'else' block returns 'void' where '{}' is expected",
+                    self.scope.borrow().expected_type
+                )));
+            }
+        } else {
+            let provided_type = match self.metastack.pop().unwrap() {
+                MetaStackEntry::Type(type_) => type_,
+                MetaStackEntry::Identifier(_, type_) => type_,
+                MetaStackEntry::VariableDeclaration(_, _) => Type::Void,
+            };
+            if self.scope.borrow().expected_type != provided_type {
+                self.errors.push(AnalyserError::type_error(format!(
+                    "'else' block returns '{}' where '{}' is expected",
                     provided_type,
                     self.scope.borrow().expected_type
                 )));

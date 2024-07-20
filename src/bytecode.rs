@@ -37,7 +37,9 @@ pub enum Opcode {
     /// Will compare the two ints on top of stack and set the bflag register to true if the first
     /// is grather than the second
     ICmpGT,
-    /// Will jump to the provided offset if the bflag register if false
+    // Will jump to the provided offset
+    Jump(usize),
+    /// Will jump to the provided offset if the top of stack is a bool value false
     JumpIfFalse(usize),
     /// Will Load a value from constant pool at provided index to the stack
     Ldc(usize),
@@ -98,7 +100,8 @@ impl fmt::Display for Opcode {
             Self::IDiv => write!(f, "[idiv]"),
             Self::Ldc(usize) => write!(f, "[ldc] {}", usize),
             Self::ICmpGT => write!(f, "[icmpgt]"),
-            Self::JumpIfFalse(usize) => write!(f, "jumpiffalse {usize}"),
+            Self::JumpIfFalse(usize) => write!(f, "[jumpiffalse] {usize}"),
+            Self::Jump(offset) => write!(f, "[jump] {offset}"),
         }
     }
 }

@@ -23,6 +23,7 @@ pub enum Token {
     Semicolon,
     FunctionDeclarator,
     If,
+    Else,
     Return,
 
     TypeInteger,
@@ -57,6 +58,7 @@ impl fmt::Display for Token {
             Self::TypeBoolean => write!(f, "bool"),
             Self::Comma => write!(f, ","),
             Self::If => write!(f, "if"),
+            Self::Else => write!(f, "else"),
             Self::GratherThan => write!(f, ">"),
             Self::Return => write!(f, "return"),
             Self::Equal => write!(f, "="),

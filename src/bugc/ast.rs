@@ -5,7 +5,7 @@ use bug::Type;
 #[derive(Debug, Clone)]
 pub enum Statement {
     Assignment(Option<String>),
-    If(BlockStatement),
+    If(BlockStatement, Option<BlockStatement>),
     Expression(Expression),
     VariableDeclaration(VariableDeclaration),
     FunctionDeclaration(FunctionDeclaration),

@@ -95,6 +95,7 @@ impl Runtime {
                 Opcode::Ldc(index) => match program.pool.entries[index] {
                     PoolEntry::Object(ref object) => current_frame.stack.push(object.clone()),
                 },
+                Opcode::Jump(offset) => current_frame.pc = offset,
             }
         }
     }
