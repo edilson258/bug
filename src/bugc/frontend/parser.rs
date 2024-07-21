@@ -139,6 +139,7 @@ impl<'a> Parser<'a> {
             Token::Arrow => Type::Void,
             Token::TypeInteger => Type::Integer,
             Token::TypeString => Type::String,
+            Token::TypeBoolean => Type::Boolean,
             _ => {
                 return Err(format!(
                     "Expected return type annotation, but provided '{}'",
@@ -164,6 +165,7 @@ impl<'a> Parser<'a> {
             let param_type = match self.curr_token {
                 Token::TypeString => Type::String,
                 Token::TypeInteger => Type::Integer,
+                Token::TypeBoolean => Type::Boolean,
                 _ => {
                     return Err(format!(
                         "Expected param type, but provided '{}'",
