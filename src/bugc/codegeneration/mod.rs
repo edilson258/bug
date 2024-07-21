@@ -1,24 +1,24 @@
 use std::collections::HashMap;
 
 use crate::ast::*;
-use bug::bytecode::{Bytecode, Opcode, PushOperand};
+use bug::bytecode::{ByteCodeStream, Opcode, PushOperand};
 use bug::{DefinedFn, Object, Pool, PoolEntry, Program, Type};
 
 struct Context {
-    bytecode: Bytecode,
+    bytecode: ByteCodeStream,
     locals: HashMap<String, Local>,
 }
 
 impl Context {
     pub fn make() -> Self {
         Self {
-            bytecode: Bytecode::make(vec![]),
+            bytecode: ByteCodeStream::empty(),
             locals: HashMap::new(),
         }
     }
 
     pub fn reset(&mut self) {
-        self.bytecode.instrs.clear();
+        self.bytecode.clear();
         self.locals.clear();
     }
 }
@@ -90,30 +90,33 @@ impl CodeGenerator {
         alternative: Option<BlockStatement>,
     ) {
         if alternative.is_none() {
-            // Adding "No operation" as placeholder to substitute later with a "JumpIfFalse" op
-            let nop_index = self.context.bytecode.instrs.len();
+            let before_if_offset = self.context.bytecode.get_pos();
             self.context.bytecode.push(Opcode::Nop);
-
             for stmt in consequence {
                 self.generate_statement(stmt);
             }
-            let after_if_block = self.context.bytecode.instrs.len();
-            self.context.bytecode.instrs[nop_index] = Opcode::JumpIfFalse(after_if_block);
+            let after_if_offset = self.context.bytecode.get_pos();
+            self.context
+                .bytecode
+                .push_at(Opcode::JumpIfFalse(after_if_offset), before_if_offset);
         } else {
-            let before_if_offset = self.context.bytecode.instrs.len();
+            let before_if_offset = self.context.bytecode.get_pos();
             self.context.bytecode.push(Opcode::Nop);
             for stmt in consequence {
                 self.generate_statement(stmt);
             }
-            let after_if_offset = self.context.bytecode.instrs.len();
+            let after_if_offset = self.context.bytecode.get_pos();
             self.context.bytecode.push(Opcode::Nop);
             for stmt in alternative.unwrap() {
                 self.generate_statement(stmt);
             }
-            let after_else_offset = self.context.bytecode.instrs.len();
-            self.context.bytecode.instrs[before_if_offset] =
-                Opcode::JumpIfFalse(after_if_offset + 1);
-            self.context.bytecode.instrs[after_if_offset] = Opcode::Jump(after_else_offset);
+            let after_else_offset = self.context.bytecode.get_pos();
+            self.context
+                .bytecode
+                .push_at(Opcode::JumpIfFalse(after_if_offset + 1), before_if_offset);
+            self.context
+                .bytecode
+                .push_at(Opcode::Jump(after_else_offset), after_if_offset);
         }
     }
 
@@ -238,19 +241,19 @@ mod tests {
                 "Hello, world!".to_string()
             ))));
 
-        let main_instructions = program.fns.get("main").unwrap().code.instrs.clone();
+        let main_code = program.fns.get("main").unwrap().code.clone();
 
-        match &main_instructions[0] {
+        match main_code.get_at(0).unwrap() {
             Opcode::Ldc(_) => {}
             x => panic!("Unexpected instruction {}", x),
         }
 
-        match &main_instructions[1] {
+        match main_code.get_at(1).unwrap() {
             Opcode::Invoke(_) => {}
             x => panic!("Unexpected instruction {}", x),
         }
 
-        match &main_instructions[2] {
+        match main_code.get_at(2).unwrap() {
             Opcode::Return => {}
             x => panic!("Unexpected instruction {}", x),
         }

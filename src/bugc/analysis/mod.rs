@@ -175,12 +175,11 @@ impl Analyser {
             for stmt in alternative.as_mut().unwrap() {
                 self.analyse_statement(stmt);
             }
-            let provided_type = self.analyse_return_after_block("else");
-            self.metastack.push(MetaStackEntry::Type(provided_type));
+            self.analyse_return_after_block("else");
         }
     }
 
-    fn analyse_return_after_block(&mut self, block_name: &str) -> Type {
+    fn analyse_return_after_block(&mut self, block_name: &str) {
         if self.metastack.is_empty() {
             if self.scope.borrow().expected_type != Type::Void {
                 self.errors.push(AnalyserError::type_error(format!(
@@ -189,7 +188,6 @@ impl Analyser {
                     self.scope.borrow().expected_type,
                 )));
             }
-            return Type::Void;
         } else {
             let provided_type = match self.metastack.pop().unwrap() {
                 MetaStackEntry::Type(type_) => type_,
@@ -204,7 +202,6 @@ impl Analyser {
                     self.scope.borrow().expected_type,
                 )));
             }
-            return provided_type;
         }
     }
 

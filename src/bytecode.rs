@@ -1,5 +1,4 @@
 use core::fmt;
-use std::{process::exit, usize};
 
 use serde::{Deserialize, Serialize};
 
@@ -30,7 +29,7 @@ pub enum Opcode {
     IDiv,
     /// Return from a frame (block)
     Return,
-    /// Returns an int from a frame (block)
+    /// Returns the value on the top of the current stack
     ReturnTop,
     /// Will make a function call by provided name
     Invoke(String),
@@ -52,36 +51,43 @@ pub enum Opcode {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Bytecode {
-    pub instrs: Vec<Opcode>,
+pub struct ByteCodeStream {
+    code: Vec<Opcode>,
 }
 
-impl Bytecode {
-    pub fn make(instrs: Vec<Opcode>) -> Self {
-        Self { instrs }
+impl ByteCodeStream {
+    pub fn empty() -> Self {
+        Self { code: vec![] }
     }
 
-    pub fn fetch_by_index(&self, index: usize) -> Opcode {
-        self.check_bound(index);
-        self.instrs[index].clone()
+    pub fn from(code: Vec<Opcode>) -> Self {
+        Self { code }
     }
 
-    fn check_bound(&self, index: usize) {
-        if index >= self.instrs.len() {
-            eprintln!(
-                "[Error]: Couldn't fetch instruction at index {}: OutOfRange",
-                index
-            );
-            exit(1);
+    pub fn push(&mut self, opcode: Opcode) {
+        self.code.push(opcode)
+    }
+
+    pub fn push_at(&mut self, opcode: Opcode, offset: usize) {
+        if offset >= self.code.len() {
+            panic!("Push opcode out of range offset");
         }
+        self.code[offset] = opcode;
     }
 
-    pub fn push(&mut self, op: Opcode) {
-        self.instrs.push(op);
+    pub fn get_at(&self, offset: usize) -> Option<&Opcode> {
+        if offset >= self.code.len() {
+            return None;
+        }
+        return Some(&self.code[offset]);
     }
 
-    pub fn push_many(&mut self, ops: Vec<Opcode>) {
-        self.instrs.extend(ops);
+    pub fn get_pos(&self) -> usize {
+        self.code.len()
+    }
+
+    pub fn clear(&mut self) {
+        self.code.clear()
     }
 }
 

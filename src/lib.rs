@@ -5,7 +5,7 @@ pub mod utils;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use bytecode::Bytecode;
+use bytecode::ByteCodeStream;
 use core::fmt;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -60,7 +60,7 @@ pub struct Program {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DefinedFn {
     pub arity: usize,
-    pub code: Bytecode,
+    pub code: ByteCodeStream,
     pub max_locals: usize,
 }
 

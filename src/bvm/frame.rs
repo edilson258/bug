@@ -1,7 +1,7 @@
 use std::process::exit;
 
 use crate::stack::Stack;
-use bug::bytecode::{Bytecode, Opcode};
+use bug::bytecode::{ByteCodeStream, Opcode};
 use bug::Object;
 
 #[derive(Debug, Clone)]
@@ -37,13 +37,13 @@ impl Locals {
 #[derive(Debug, Clone)]
 pub struct Frame {
     pub pc: usize,
-    code: Bytecode,
+    code: ByteCodeStream,
     pub locals: Locals,
     pub stack: Stack<Object>,
 }
 
 impl Frame {
-    pub fn make(code: Bytecode, max_locals: usize) -> Self {
+    pub fn make(code: ByteCodeStream, max_locals: usize) -> Self {
         Self {
             pc: 0,
             code,
@@ -53,8 +53,8 @@ impl Frame {
     }
 
     pub fn fetch_next_instr(&mut self) -> Opcode {
-        let instr = self.code.fetch_by_index(self.pc);
+        let instr = self.code.get_at(self.pc).unwrap();
         self.pc += 1;
-        instr
+        instr.clone()
     }
 }
