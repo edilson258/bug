@@ -53,7 +53,7 @@ impl Runtime {
                         }
                     }
                 }
-                Opcode::IReturn => {
+                Opcode::ReturnTop => {
                     let mut parent_frame = framestack.pop().unwrap();
                     parent_frame.stack.push(current_frame.stack.pop().unwrap());
                     current_frame = parent_frame;

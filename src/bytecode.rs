@@ -31,7 +31,7 @@ pub enum Opcode {
     /// Return from a frame (block)
     Return,
     /// Returns an int from a frame (block)
-    IReturn,
+    ReturnTop,
     /// Will make a function call by provided name
     Invoke(String),
     /// Will compare the two ints on top of stack and set the bflag register to true if the first
@@ -91,7 +91,7 @@ impl fmt::Display for Opcode {
             Self::Nop => write!(f, "[Nop]"),
             Self::IAdd => write!(f, "[iadd]"),
             Self::Return => write!(f, "[return]"),
-            Self::IReturn => write!(f, "[ireturn]"),
+            Self::ReturnTop => write!(f, "[ireturn]"),
             Self::Invoke(name) => write!(f, "[invoke] {}", name),
             Self::LLoad(index) => write!(f, "[iload] {}", index),
             Self::LStore(index) => write!(f, "[istore] {}", index),
