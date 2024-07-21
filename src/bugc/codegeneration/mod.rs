@@ -53,7 +53,6 @@ impl CodeGenerator {
         for stmt in ast {
             self.generate_statement(stmt);
         }
-        println!("{:#?}", self.fns);
         Program {
             pool: self.pool.to_owned(),
             fns: self.fns.to_owned(),
@@ -130,8 +129,8 @@ impl CodeGenerator {
         }
 
         match fn_decl.return_type {
-            Type::Integer => self.context.bytecode.push(Opcode::IReturn),
-            _ => self.context.bytecode.push(Opcode::Return),
+            Type::Void => self.context.bytecode.push(Opcode::Return),
+            _ => self.context.bytecode.push(Opcode::ReturnTop),
         }
 
         self.fns.insert(
@@ -204,8 +203,7 @@ impl CodeGenerator {
     fn generate_return_expression(&mut self, type_: Type) {
         match type_ {
             Type::Void => self.context.bytecode.push(Opcode::Return),
-            Type::Integer => self.context.bytecode.push(Opcode::IReturn),
-            _ => unimplemented!(),
+            _ => self.context.bytecode.push(Opcode::ReturnTop),
         };
     }
 }

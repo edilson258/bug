@@ -175,19 +175,21 @@ impl Analyser {
             for stmt in alternative.as_mut().unwrap() {
                 self.analyse_statement(stmt);
             }
-            self.analyse_return_after_block("else");
+            let provided_type = self.analyse_return_after_block("else");
+            self.metastack.push(MetaStackEntry::Type(provided_type));
         }
     }
 
-    fn analyse_return_after_block(&mut self, block_name: &str) {
+    fn analyse_return_after_block(&mut self, block_name: &str) -> Type {
         if self.metastack.is_empty() {
             if self.scope.borrow().expected_type != Type::Void {
                 self.errors.push(AnalyserError::type_error(format!(
                     "'{}' block returns 'void' where '{}' is expected",
+                    block_name,
                     self.scope.borrow().expected_type,
-                    block_name
                 )));
             }
+            return Type::Void;
         } else {
             let provided_type = match self.metastack.pop().unwrap() {
                 MetaStackEntry::Type(type_) => type_,
@@ -197,11 +199,12 @@ impl Analyser {
             if self.scope.borrow().expected_type != provided_type {
                 self.errors.push(AnalyserError::type_error(format!(
                     "'{}' block returns '{}' where '{}' is expected",
+                    block_name,
                     provided_type,
                     self.scope.borrow().expected_type,
-                    block_name
                 )));
             }
+            return provided_type;
         }
     }
 
