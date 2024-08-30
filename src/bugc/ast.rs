@@ -1,68 +1,66 @@
-use core::fmt;
+use crate::frontend::token::Token;
 
-use bug::Type;
+pub type Ast = Vec<Statement>;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum Statement {
-    Assignment(Option<String>),
-    If(BlockStatement, Option<BlockStatement>),
-    Expression(Expression),
-    VariableDeclaration(VariableDeclaration),
-    FunctionDeclaration(FunctionDeclaration),
+  Function(StatementFunction),
+  Expression(StatementExpression),
 }
 
-pub type BlockStatement = Vec<Statement>;
-pub type AST = BlockStatement;
-
-#[derive(Debug, Clone)]
-pub struct VariableDeclaration {
-    pub type_: Type,
-    pub name: String,
+#[derive(Debug)]
+pub enum StatementExpression {
+  Call(ExpressionCall),
+  Literal(ExpressionLiteral),
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct FnParam {
-    pub name: String,
-    pub type_: Type,
+#[derive(Debug)]
+pub struct ExpressionCall {
+  pub name_token: Token,
 }
 
-pub type FnParams = Vec<FnParam>;
-
-#[derive(Debug, Clone)]
-pub struct FunctionDeclaration {
-    pub name: String,
-    pub params: FnParams,
-    pub return_type: Type,
-    pub body: BlockStatement,
+impl ExpressionCall {
+  pub fn new(name_token: Token) -> Self {
+    Self { name_token }
+  }
 }
 
-#[derive(Debug, Clone)]
-pub enum Expression {
-    Identifier(String),
-    Literal(Literal),
-    FunctionCall(String),
-    BinaryOp(BinaryOp),
-    Return(Option<Type>),
+#[derive(Debug)]
+pub enum ExpressionLiteral {
+  String(LiteralString),
+  Integer(LiteralInteger),
 }
 
-#[derive(Debug, Clone)]
-pub enum Literal {
-    Int(i32),
-    String(String),
-    Boolean(bool),
+#[derive(Debug)]
+pub struct LiteralString {
+  pub token: Token,
 }
 
-#[derive(Debug, Clone)]
-pub enum BinaryOp {
-    Plus(Option<Type>),
-    GratherThan(Option<Type>),
+#[derive(Debug)]
+pub struct LiteralInteger {
+  pub token: Token,
 }
 
-impl fmt::Display for BinaryOp {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Plus(_) => write!(f, "+"),
-            Self::GratherThan(_) => write!(f, ">"),
-        }
-    }
+#[derive(Debug)]
+pub struct StatementFunction {
+  pub identifier: Token,
+  pub body: Vec<Statement>,
+}
+
+impl StatementFunction {
+  pub fn new(identifier: Token, body: Vec<Statement>) -> Self {
+    Self { identifier, body }
+  }
+}
+
+impl LiteralString {
+  pub fn new(token: Token) -> Self {
+    Self { token }
+  }
+}
+
+impl LiteralInteger {
+  pub fn new(token: Token) -> Self {
+    Self { token }
+  }
 }
