@@ -1,1 +1,1 @@
-f main -> "Hello, world!" .write;
+f main -> "Hello, world!" @write.
