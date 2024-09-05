@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use bug::{
-  bytecode::{ByteCodeStream, Opcode},
+  bytecode::{ByteCodeStream, Opcode, PushOperand},
   DefinedFn, Object, Pool, PoolEntry, Program,
 };
 
@@ -69,7 +69,7 @@ impl<'a> CodeGenerator<'a> {
   fn emit_expression_literal(&mut self, literal: &ExpressionLiteral) {
     match literal {
       ExpressionLiteral::String(string) => self.emit_literal_string(string.get_data()),
-      ExpressionLiteral::Integer(_) => todo!(),
+      ExpressionLiteral::Number(number) => self.emit_literal_number(number.get_data()),
     }
   }
 
@@ -77,5 +77,9 @@ impl<'a> CodeGenerator<'a> {
     let pool_entry = PoolEntry::Object(Object::String(string.to_owned()));
     let index = self.constant_pool.append(pool_entry);
     self.current_scope.bytecode.push(Opcode::Ldc(index));
+  }
+
+  fn emit_literal_number(&mut self, number: &f32) {
+    self.current_scope.bytecode.push(Opcode::Push(PushOperand::Number(number.to_owned())));
   }
 }

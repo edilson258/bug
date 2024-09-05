@@ -35,7 +35,7 @@ impl ExpressionCall {
 #[derive(Debug)]
 pub enum ExpressionLiteral {
   String(LiteralString),
-  Integer(LiteralInteger),
+  Number(NumberLiteral),
 }
 
 #[derive(Debug)]
@@ -44,7 +44,7 @@ pub struct LiteralString {
 }
 
 #[derive(Debug)]
-pub struct LiteralInteger {
+pub struct NumberLiteral {
   pub token: Token,
 }
 
@@ -80,13 +80,14 @@ impl LiteralString {
   }
 }
 
-impl LiteralInteger {
+impl NumberLiteral {
   pub fn new(token: Token) -> Self {
     Self { token }
   }
 
-  pub fn get_data(&self) -> &str {
+  pub fn get_data(&self) -> &f32 {
     match &self.token.kind {
+      TokenKind::Number(number) => number,
       _ => unreachable!(),
     }
   }

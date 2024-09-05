@@ -78,14 +78,15 @@ impl<'a> Parser<'a> {
   fn parse_statement_expression(&mut self) -> StatementExpression {
     match self.current_token.kind {
       TokenKind::At => StatementExpression::Call(self.parse_expession_call()),
-      TokenKind::String(_) => StatementExpression::Literal(self.parse_expession_literal()),
-      _ => panic!("Unexpexted expression"),
+      TokenKind::String(_) | TokenKind::Number(_) => StatementExpression::Literal(self.parse_expession_literal()),
+      _ => panic!("[ERROR]: Unexpexted expression {:#?}", self.current_token.kind),
     }
   }
 
   fn parse_expession_literal(&mut self) -> ExpressionLiteral {
     let literal = match self.current_token.kind {
       TokenKind::String(_) => ExpressionLiteral::String(LiteralString::new(self.current_token.clone())),
+      TokenKind::Number(_) => ExpressionLiteral::Number(NumberLiteral::new(self.current_token.clone())),
       _ => unreachable!("Expected token to be a literal"),
     };
     self.bump();

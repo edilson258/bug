@@ -75,8 +75,8 @@ impl Runtime {
           }
         }
         Opcode::Push(val) => match val {
-          PushOperand::Integer(x) => {
-            current_frame.stack.push(Object::Int(x));
+          PushOperand::Number(x) => {
+            current_frame.stack.push(Object::Number(x));
           }
           PushOperand::Boolean(x) => {
             current_frame.stack.push(Object::Boolean(x));
@@ -90,13 +90,13 @@ impl Runtime {
     }
   }
 
-  fn ipop_two(current_frame: &mut Frame) -> (i32, i32) {
+  fn ipop_two(current_frame: &mut Frame) -> (f32, f32) {
     let snd = match current_frame.stack.pop().unwrap() {
-      Object::Int(x) => x,
+      Object::Number(x) => x,
       _ => panic!("[ipop] expects int on stack"),
     };
     let fst = match current_frame.stack.pop().unwrap() {
-      Object::Int(y) => y,
+      Object::Number(y) => y,
       _ => panic!("[ipop] expects int on stack"),
     };
 
@@ -105,16 +105,16 @@ impl Runtime {
 
   fn iadd(current_frame: &mut Frame) {
     let (lhs, rhs) = Self::ipop_two(current_frame);
-    current_frame.stack.push(Object::Int(lhs + rhs));
+    current_frame.stack.push(Object::Number(lhs + rhs));
   }
 
   fn imul(current_frame: &mut Frame) {
     let (lhs, rhs) = Self::ipop_two(current_frame);
-    current_frame.stack.push(Object::Int(lhs * rhs));
+    current_frame.stack.push(Object::Number(lhs * rhs));
   }
 
   fn idiv(current_frame: &mut Frame) {
     let (lhs, rhs) = Self::ipop_two(current_frame);
-    current_frame.stack.push(Object::Int(lhs / rhs));
+    current_frame.stack.push(Object::Number(lhs / rhs));
   }
 }

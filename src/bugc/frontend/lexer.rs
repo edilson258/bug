@@ -30,11 +30,17 @@ impl<'a> Lexer<'a> {
       '-' => self.read_check_ahead("->", TokenKind::Minus, TokenKind::Arrow),
       '"' => self.read_string(),
       'a'..='z' | 'A'..='Z' | '_' => self.read_keyword_or_identifier(),
+      '0'..='9' => self.read_number(),
       _ => {
-        eprintln!("[ERROR]: Unexpected token");
-        std::process::exit(1);
+        panic!("[ERROR]: Unexpected token {}", self.peek_one());
       }
     }
+  }
+
+  fn read_number(&mut self) -> Token {
+    let num = self.chop_while(|x| x.is_numeric() || x == '.');
+    let num = num.parse::<f32>().unwrap_or_else(|err| panic!("[ERROR]: Couldn't parse string to number {err}"));
+    Token::new(TokenKind::Number(num), self.get_location())
   }
 
   fn read_string(&mut self) -> Token {
@@ -47,7 +53,7 @@ impl<'a> Lexer<'a> {
       }
 
       if self.is_eof() || self.peek_one() == '\n' {
-        std::process::exit(1);
+        panic!("[ERROR]: Unterminated string literal");
       }
 
       self.advance_one();
@@ -81,7 +87,6 @@ impl<'a> Lexer<'a> {
       self.advance_may(expected.len());
       return Token::new(complex, self.get_location());
     }
-
     Token::new(simple, self.get_location())
   }
 

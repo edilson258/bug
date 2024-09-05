@@ -4,6 +4,7 @@ use std::{ops::Add, process::Output};
 pub enum TokenKind {
   Eof,
 
+  Number(f32),
   String(String),
   Identifier(String),
 

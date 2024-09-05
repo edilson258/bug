@@ -105,15 +105,12 @@ impl<'a> Checker<'a> {
     self.stack_depth -= callee.arity as usize;
 
     if callee.return_type != Type::Void {
-      self.stack_depth += 1;
+      self.stack_depth += 1
     }
   }
 
-  fn check_expression_literal(&mut self, literal: &'a ExpressionLiteral) {
-    match literal {
-      ExpressionLiteral::String(_) => self.stack_depth += 1,
-      ExpressionLiteral::Integer(_) => self.stack_depth += 1,
-    };
+  fn check_expression_literal(&mut self, _literal: &'a ExpressionLiteral) {
+    self.stack_depth += 1;
   }
 }
 

@@ -13,7 +13,7 @@ impl Locals {
   pub fn make(max_locals: usize) -> Self {
     let mut inner: Vec<Object> = Vec::with_capacity(max_locals);
     for _ in 0..max_locals {
-      inner.push(Object::Int(0)) // init locals with zeros
+      inner.push(Object::Number(0.0)) // init locals with zeros
     }
     Self { inner }
   }
