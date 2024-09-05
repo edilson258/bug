@@ -1,3 +1,5 @@
+use std::{ops::Add, process::Output};
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenKind {
   Eof,
@@ -21,6 +23,14 @@ pub struct Location {
   pub column: usize,
   pub start: usize,
   pub end: usize,
+}
+
+impl Add<Location> for Location {
+  type Output = Location;
+
+  fn add(self, rhs: Location) -> Self::Output {
+    Location { line: self.line, column: self.column, start: self.start, end: rhs.end }
+  }
 }
 
 impl Default for Location {

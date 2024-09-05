@@ -1,4 +1,4 @@
-use crate::frontend::token::Token;
+use crate::frontend::token::{Token, TokenKind};
 
 pub type Ast = Vec<Statement>;
 
@@ -22,6 +22,13 @@ pub struct ExpressionCall {
 impl ExpressionCall {
   pub fn new(name_token: Token) -> Self {
     Self { name_token }
+  }
+
+  pub fn get_name(&self) -> &str {
+    match self.name_token.kind {
+      TokenKind::Identifier(ref name) => name,
+      _ => unreachable!(),
+    }
   }
 }
 
@@ -51,16 +58,36 @@ impl StatementFunction {
   pub fn new(identifier: Token, body: Vec<Statement>) -> Self {
     Self { identifier, body }
   }
+
+  pub fn get_name(&self) -> &str {
+    match self.identifier.kind {
+      TokenKind::Identifier(ref str) => str,
+      _ => unreachable!(),
+    }
+  }
 }
 
 impl LiteralString {
   pub fn new(token: Token) -> Self {
     Self { token }
   }
+
+  pub fn get_data(&self) -> &str {
+    match &self.token.kind {
+      TokenKind::String(string) => string,
+      _ => unreachable!(),
+    }
+  }
 }
 
 impl LiteralInteger {
   pub fn new(token: Token) -> Self {
     Self { token }
+  }
+
+  pub fn get_data(&self) -> &str {
+    match &self.token.kind {
+      _ => unreachable!(),
+    }
   }
 }

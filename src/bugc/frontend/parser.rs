@@ -94,6 +94,7 @@ impl<'a> Parser<'a> {
   }
 
   fn parse_expession_call(&mut self) -> ExpressionCall {
+    let at_location = self.current_token.location.clone();
     self.bump(); // eat '@'
 
     let name_token = match self.current_token.kind {
@@ -102,6 +103,6 @@ impl<'a> Parser<'a> {
     };
     self.bump();
 
-    ExpressionCall::new(name_token)
+    ExpressionCall::new(Token { kind: name_token.kind, location: at_location + name_token.location })
   }
 }
