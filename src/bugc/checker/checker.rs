@@ -20,9 +20,7 @@ impl<'a> Checker<'a> {
     for statement in self.ast {
       self.check_statement(statement);
     }
-
     self.lookup_main_function();
-
     &self.diagnostics
   }
 
@@ -34,14 +32,17 @@ impl<'a> Checker<'a> {
       return;
     }
 
-    let _ = match &main.unwrap().value {
-      SymbolValue::Function(function) => function,
-      // otherwise emit error: expected main to be a function
+    let (arity, return_type) = match &main.unwrap().value {
+      SymbolValue::Function(function) => (function.arity, function.return_type.clone()),
     };
 
-    // TODO:
-    //   - check return type
-    //   - check args count
+    if arity != 0 {
+      self.emit_main_takes_no_args();
+    }
+
+    if return_type != Type::Void {
+      self.emit_main_have_no_return();
+    }
   }
 
   fn check_statement(&mut self, statement: &'a Statement) {
@@ -88,7 +89,6 @@ impl<'a> Checker<'a> {
 
     let callee = match &symb.unwrap().value {
       SymbolValue::Function(x) => x,
-      // otherwise "object is not callable"
     };
 
     if self.stack_depth < callee.arity as usize {
@@ -140,6 +140,16 @@ impl<'a> Checker<'a> {
     let message = format!("Missing `main` function");
     self.diagnostics.emit(Diagnostic::Error(Error::new(None, message)));
   }
+
+  fn emit_main_takes_no_args(&mut self) {
+    let message = format!("The `main` function must not take any parameter");
+    self.diagnostics.emit(Diagnostic::Error(Error::new(None, message)));
+  }
+
+  fn emit_main_have_no_return(&mut self) {
+    let message = format!("The `main` function must return `void`");
+    self.diagnostics.emit(Diagnostic::Error(Error::new(None, message)));
+  }
 }
 
 #[derive(Debug)]
@@ -173,7 +183,13 @@ impl<'a> Diagnostics<'a> {
     self.inner.push(diagnostic)
   }
 
-  pub fn emit_all(&self) {}
+  /**
+   * Will display all the diagnostics to stdout and return the count of errors
+   *
+   */
+  pub fn emit_all(&self) -> usize {
+    self.inner.len()
+  }
 }
 
 /**
@@ -223,17 +239,17 @@ struct Context<'a> {
 }
 
 impl<'a> Context<'a> {
-  fn new(builtins: HashMap<String, NativeFn>) -> Self {
+  fn new(natives: HashMap<String, NativeFn>) -> Self {
     let mut table: HashMap<String, Symbol> = HashMap::new();
 
-    for b in builtins {
-      table.insert(b.0, Symbol::new(0, true, true, SymbolValue::Function(b.1.prototype)));
+    for (name, native) in natives {
+      table.insert(name, Symbol::new(0, true, true, SymbolValue::Function(native.prototype)));
     }
 
     Self { curr_scope_id: 0, table, scopes: vec![Scope::new(0, ScopeKind::Gloabal)] }
   }
 
-  fn lookup(&mut self, name: &str) -> Option<&Symbol> {
+  fn lookup(&self, name: &str) -> Option<&Symbol> {
     self.table.get(name)
   }
 
