@@ -1,9 +1,6 @@
+use super::lexer::Lexer;
+use super::token::{Token, TokenKind};
 use crate::ast::*;
-
-use super::{
-  lexer::Lexer,
-  token::{Token, TokenKind},
-};
 
 pub struct Parser<'a> {
   current_token: Token,

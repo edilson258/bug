@@ -1,3 +1,1 @@
-f main -> 
-  "Hello, world!" @write
-  69 @write.
+f main -> "Hello, world!" @write.

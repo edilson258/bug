@@ -1,11 +1,7 @@
-use std::collections::HashMap;
-
-use bug::{
-  bytecode::{ByteCodeStream, Opcode, PushOperand},
-  DefinedFn, Object, Pool, PoolEntry, Program,
-};
-
 use super::ast::*;
+use bug::bytecode::{ByteCodeStream, Opcode, PushOperand};
+use bug::{DefinedFn, Object, Pool, PoolEntry, Program};
+use std::collections::HashMap;
 
 #[derive(Debug)]
 struct Scope {
@@ -15,6 +11,14 @@ struct Scope {
 impl Scope {
   fn new() -> Self {
     Self { bytecode: ByteCodeStream::empty() }
+  }
+
+  fn reset(&mut self) {
+    self.bytecode.clear();
+  }
+
+  fn push_op(&mut self, op: Opcode) {
+    self.bytecode.push(op);
   }
 }
 
@@ -46,11 +50,13 @@ impl<'a> CodeGenerator<'a> {
   }
 
   fn emit_statement_function(&mut self, function: &StatementFunction) {
+    self.current_scope.reset();
+
     for statement in &function.body {
       self.emit_statement(statement);
     }
+    self.current_scope.push_op(Opcode::Return);
 
-    self.current_scope.bytecode.push(Opcode::Return);
     let defined_fn = DefinedFn { arity: 0, code: self.current_scope.bytecode.clone(), max_locals: 0 };
     self.functions.insert(function.get_name().to_owned(), defined_fn);
   }
@@ -76,10 +82,10 @@ impl<'a> CodeGenerator<'a> {
   fn emit_literal_string(&mut self, string: &str) {
     let pool_entry = PoolEntry::Object(Object::String(string.to_owned()));
     let index = self.constant_pool.append(pool_entry);
-    self.current_scope.bytecode.push(Opcode::Ldc(index));
+    self.current_scope.push_op(Opcode::Ldc(index));
   }
 
   fn emit_literal_number(&mut self, number: &f32) {
-    self.current_scope.bytecode.push(Opcode::Push(PushOperand::Number(number.to_owned())));
+    self.current_scope.push_op(Opcode::Push(PushOperand::Number(number.to_owned())));
   }
 }
