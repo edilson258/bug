@@ -1,5 +1,5 @@
 use crate::{frame::Frame, stack::Stack};
-use bug::bytecode::Opcode;
+use bug::bytecode::{Opcode, PushOperand};
 use bug::Object;
 use bug::{stdlib::NativeFn, Program};
 use std::collections::HashMap;
@@ -14,7 +14,7 @@ pub struct Engine {
 
 impl Engine {
   pub fn bootstrap(program: Program, natives: HashMap<String, NativeFn>) -> Self {
-    Self { program, frame: Frame::default(), frame_stack: Stack::make(), natives, should_halt: false }
+    Self { program, frame: Frame::default(), frame_stack: Stack::new(), natives, should_halt: false }
   }
 
   pub fn run(&mut self) {
@@ -27,6 +27,7 @@ impl Engine {
         Opcode::Return => self.return_(),
         Opcode::Ldc(idx) => self.ldc(idx),
         Opcode::Invoke(name) => self.invoke(name),
+        Opcode::Push(operand) => self.push(operand),
         _ => unimplemented!(),
       };
     }
@@ -34,7 +35,7 @@ impl Engine {
 
   fn setup_main_frame(&mut self) {
     let main = self.program.fns.get("main").unwrap();
-    self.frame = Frame::make(main.code.clone() /* Don't like this clone */, main.max_locals);
+    self.frame = Frame::new(main.code.clone() /* Don't like this clone */, main.max_locals);
   }
 
   fn engine_should_run(&self) -> bool {
@@ -61,12 +62,19 @@ impl Engine {
       return;
     }
     let callee = self.program.fns.get(&name).unwrap();
-    let mut frame = Frame::make(callee.code.clone() /* Don't like this clone */, callee.max_locals);
+    let mut frame = Frame::new(callee.code.clone() /* Don't like this clone */, callee.max_locals);
     for idx in 0..callee.arity {
       frame.store(callee.arity - idx - 1, self.frame.pop());
     }
     self.frame_stack.push(self.frame.clone());
     self.frame = frame;
+  }
+
+  fn push(&mut self, operand: PushOperand) {
+    match operand {
+      PushOperand::Number(x) => self.frame.push(Object::Number(x)),
+      PushOperand::Boolean(x) => self.frame.push(Object::Boolean(x)),
+    };
   }
 
   fn return_(&mut self) {

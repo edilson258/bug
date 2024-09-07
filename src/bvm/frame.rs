@@ -1,5 +1,3 @@
-use std::process::exit;
-
 use crate::stack::Stack;
 use bug::bytecode::{ByteCodeStream, Opcode};
 use bug::Object;
@@ -10,7 +8,7 @@ pub struct Locals {
 }
 
 impl Locals {
-  pub fn make(max_locals: usize) -> Self {
+  pub fn new(max_locals: usize) -> Self {
     let mut inner: Vec<Object> = Vec::with_capacity(max_locals);
     for _ in 0..max_locals {
       inner.push(Object::Number(0.)) // init locals with zeros
@@ -18,15 +16,14 @@ impl Locals {
     Self { inner }
   }
 
-  pub fn get_by_index(&self, index: usize) -> Object {
+  pub fn get_at(&self, index: usize) -> Object {
     if index >= self.inner.len() {
-      eprintln!("[Error]: Couldn't access to locals by index {}: OutOfRange", index);
-      exit(1);
+      panic!("[Error]: Couldn't access to locals by index {}: OutOfRange", index);
     }
     self.inner[index].clone()
   }
 
-  pub fn store_at(&mut self, index: usize, o: Object) {
+  pub fn set_at(&mut self, index: usize, o: Object) {
     self.inner[index] = o;
   }
 }
@@ -40,8 +37,8 @@ pub struct Frame {
 }
 
 impl Frame {
-  pub fn make(code: ByteCodeStream, max_locals: usize) -> Self {
-    Self { pc: 0, code, stack: Stack::make(), locals: Locals::make(max_locals) }
+  pub fn new(code: ByteCodeStream, max_locals: usize) -> Self {
+    Self { pc: 0, code, stack: Stack::new(), locals: Locals::new(max_locals) }
   }
 
   pub fn fetch_next_op(&mut self) -> &Opcode {
@@ -59,12 +56,12 @@ impl Frame {
   }
 
   pub fn store(&mut self, idx: usize, o: Object) {
-    self.locals.store_at(idx, o);
+    self.locals.set_at(idx, o);
   }
 }
 
 impl Default for Frame {
   fn default() -> Self {
-    Self { pc: 0, locals: Locals::make(0), code: ByteCodeStream::empty(), stack: Stack::make() }
+    Self { pc: 0, locals: Locals::new(0), code: ByteCodeStream::empty(), stack: Stack::new() }
   }
 }
