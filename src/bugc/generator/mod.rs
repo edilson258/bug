@@ -1,6 +1,6 @@
 use super::ast::*;
 use bug::bytecode::{ByteCodeStream, Opcode, PushOperand};
-use bug::{DefinedFn, Object, Pool, PoolEntry, Program};
+use bug::{DefinedFn, Object, Pool, Program};
 use std::collections::HashMap;
 
 #[derive(Debug)]
@@ -80,8 +80,9 @@ impl<'a> CodeGenerator<'a> {
   }
 
   fn emit_literal_string(&mut self, string: &str) {
-    let pool_entry = PoolEntry::Object(Object::String(string.to_owned()));
-    let index = self.constant_pool.append(pool_entry);
+    let o = Object::String(string.to_owned());
+    let index = self.constant_pool.append(o);
+
     self.current_scope.push_op(Opcode::Ldc(index));
   }
 

@@ -52,7 +52,7 @@ pub enum Opcode {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ByteCodeStream {
-  code: Vec<Opcode>,
+  pub code: Vec<Opcode>,
 }
 
 impl ByteCodeStream {

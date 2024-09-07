@@ -20,16 +20,15 @@ impl<'a> Checker<'a> {
     for statement in self.ast {
       self.check_statement(statement);
     }
-    self.lookup_main_function();
+    self.check_main_function();
     &self.diagnostics
   }
 
-  fn lookup_main_function(&mut self) {
+  fn check_main_function(&mut self) {
     let main = self.ctx.lookup("main");
 
     if main.is_none() {
-      self.emit_missing_main();
-      return;
+      return self.emit_missing_main();
     }
 
     let (arity, return_type) = match &main.unwrap().value {

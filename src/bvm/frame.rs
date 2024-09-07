@@ -13,7 +13,7 @@ impl Locals {
   pub fn make(max_locals: usize) -> Self {
     let mut inner: Vec<Object> = Vec::with_capacity(max_locals);
     for _ in 0..max_locals {
-      inner.push(Object::Number(0.0)) // init locals with zeros
+      inner.push(Object::Number(0.)) // init locals with zeros
     }
     Self { inner }
   }
@@ -33,10 +33,10 @@ impl Locals {
 
 #[derive(Debug, Clone)]
 pub struct Frame {
-  pub pc: usize,
+  pc: usize,
+  locals: Locals,
   code: ByteCodeStream,
-  pub locals: Locals,
-  pub stack: Stack<Object>,
+  stack: Stack<Object>,
 }
 
 impl Frame {
@@ -44,9 +44,27 @@ impl Frame {
     Self { pc: 0, code, stack: Stack::make(), locals: Locals::make(max_locals) }
   }
 
-  pub fn fetch_next_instr(&mut self) -> Opcode {
+  pub fn fetch_next_op(&mut self) -> &Opcode {
     let instr = self.code.get_at(self.pc).unwrap();
     self.pc += 1;
-    instr.clone()
+    instr
+  }
+
+  pub fn push(&mut self, o: Object) {
+    self.stack.push(o);
+  }
+
+  pub fn pop(&mut self) -> Object {
+    self.stack.pop().unwrap()
+  }
+
+  pub fn store(&mut self, idx: usize, o: Object) {
+    self.locals.store_at(idx, o);
+  }
+}
+
+impl Default for Frame {
+  fn default() -> Self {
+    Self { pc: 0, locals: Locals::make(0), code: ByteCodeStream::empty(), stack: Stack::make() }
   }
 }
