@@ -45,6 +45,7 @@ impl Engine {
 
       match op {
         Opcode::Nop => self.nop(),
+        Opcode::Add => self.add(),
         Opcode::Return => self.return_(),
         Opcode::Ldc(idx) => self.ldc(idx),
         Opcode::Invoke(name) => self.invoke(name),
@@ -67,6 +68,53 @@ impl Engine {
 
   fn nop(&mut self) {
     return;
+  }
+
+  fn add(&mut self) {
+    let rhs_object = match self.frame.pop() {
+      Some(o) => o,
+      None => self.throw_stack_uderflow(),
+    };
+
+    let lhs_object = match self.frame.pop() {
+      Some(o) => o,
+      None => self.throw_stack_uderflow(),
+    };
+
+    match lhs_object {
+      Object::Number(lhs_number) => match rhs_object {
+        Object::Number(rhs_number) => self.frame.push(Object::Number(lhs_number + rhs_number)),
+        Object::Boolean(rhs_boolean) => match rhs_boolean {
+          true => self.frame.push(Object::Number(lhs_number + 1.)), // true == 1
+          false => self.frame.push(Object::Number(lhs_number)),     // false == 0
+        },
+        Object::String(_) => self.throw_add_number_to_string(),
+      },
+
+      Object::String(lhs_string) => match rhs_object {
+        Object::String(rhs_string) => self.frame.push(Object::String(lhs_string + rhs_string.as_str())),
+        Object::Number(_) => self.throw_add_number_to_string(),
+        Object::Boolean(_) => self.throw_add_boolean_to_string(),
+      },
+
+      Object::Boolean(lhs_boolean) => match rhs_object {
+        Object::Boolean(rhs_boolean) => match rhs_boolean {
+          true => match lhs_boolean {
+            true => self.frame.push(Object::Number(2.)),
+            false => self.frame.push(Object::Number(1.)),
+          },
+          false => match lhs_boolean {
+            true => self.frame.push(Object::Number(1.)),
+            false => self.frame.push(Object::Number(0.)),
+          },
+        },
+        Object::Number(rhs_number) => match lhs_boolean {
+          true => self.frame.push(Object::Number(rhs_number + 1.)), // true == 1
+          false => self.frame.push(Object::Number(rhs_number)),     // false == 0
+        },
+        Object::String(_) => self.throw_add_boolean_to_string(),
+      },
+    };
   }
 
   fn ldc(&mut self, idx: usize) {
@@ -145,6 +193,18 @@ impl Engine {
 
   fn throw_call_undefined(&self, name: &str) -> ! {
     eprintln!("RUNTIME EXCEPTION: Call to undefined function `{name}`");
+    eprintln!("    At function `{}`", self.frame.get_name());
+    std::process::exit(1);
+  }
+
+  fn throw_add_number_to_string(&self) -> ! {
+    eprintln!("RUNTIME EXCEPTION: Trying to add String and Number.");
+    eprintln!("    At function `{}`", self.frame.get_name());
+    std::process::exit(1);
+  }
+
+  fn throw_add_boolean_to_string(&self) -> ! {
+    eprintln!("RUNTIME EXCEPTION: Trying to add String and Boolean.");
     eprintln!("    At function `{}`", self.frame.get_name());
     std::process::exit(1);
   }

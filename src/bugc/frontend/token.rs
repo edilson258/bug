@@ -16,6 +16,7 @@ pub enum TokenKind {
   Semicolon,
 
   Minus,
+  Plus,
 }
 
 #[derive(Debug, Clone)]

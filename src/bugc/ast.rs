@@ -1,4 +1,4 @@
-use crate::frontend::token::{Token, TokenKind};
+use crate::frontend::token::{Location, Token, TokenKind};
 
 pub type Ast = Vec<Statement>;
 
@@ -11,7 +11,33 @@ pub enum Statement {
 #[derive(Debug)]
 pub enum StatementExpression {
   Call(ExpressionCall),
+  Binary(ExpressionBinary),
   Literal(ExpressionLiteral),
+}
+
+#[derive(Debug)]
+pub enum BinaryOperator {
+  Add,
+}
+
+#[derive(Debug)]
+pub struct ExpressionBinary {
+  pub operator: BinaryOperator,
+  pub location: Location,
+}
+
+impl ExpressionBinary {
+  pub fn new(operator: BinaryOperator, location: Location) -> Self {
+    Self { operator, location }
+  }
+}
+
+impl std::fmt::Display for BinaryOperator {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      Self::Add => write!(f, "+"),
+    }
+  }
 }
 
 #[derive(Debug)]

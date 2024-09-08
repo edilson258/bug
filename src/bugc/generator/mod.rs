@@ -70,6 +70,13 @@ impl<'a> CodeGenerator<'a> {
     match expression {
       StatementExpression::Call(call) => self.emit_expression_call(call),
       StatementExpression::Literal(literal) => self.emit_expression_literal(literal),
+      StatementExpression::Binary(binary_expression) => self.emit_expression_binary(binary_expression),
+    };
+  }
+
+  fn emit_expression_binary(&mut self, binop: &ExpressionBinary) {
+    match binop.operator {
+      BinaryOperator::Add => self.current_scope.push_op(Opcode::Add),
     };
   }
 

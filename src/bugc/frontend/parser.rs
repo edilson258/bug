@@ -70,25 +70,33 @@ impl<'a> Parser<'a> {
     StatementFunction::new(name_token, body)
   }
 
-  // f main -> "Hello, world!" @write.
-
   fn parse_statement_expression(&mut self) -> StatementExpression {
     match self.current_token.kind {
       TokenKind::At => StatementExpression::Call(self.parse_expession_call()),
       TokenKind::String(_) | TokenKind::Number(_) => StatementExpression::Literal(self.parse_expession_literal()),
+      TokenKind::Plus => StatementExpression::Binary(self.parse_expression_binary()),
       _ => panic!("[ERROR]: Unexpexted expression {:#?}", self.current_token.kind),
     }
   }
 
+  fn parse_expression_binary(&mut self) -> ExpressionBinary {
+    let op = match self.current_token.kind {
+      TokenKind::Plus => BinaryOperator::Add,
+      _ => unreachable!(),
+    };
+    let binary_expression = ExpressionBinary::new(op, self.current_token.location.clone());
+    self.bump();
+    binary_expression
+  }
+
   fn parse_expession_literal(&mut self) -> ExpressionLiteral {
-    let literal = match self.current_token.kind {
+    let literal_expression = match self.current_token.kind {
       TokenKind::String(_) => ExpressionLiteral::String(LiteralString::new(self.current_token.clone())),
       TokenKind::Number(_) => ExpressionLiteral::Number(NumberLiteral::new(self.current_token.clone())),
       _ => unreachable!("Expected token to be a literal"),
     };
     self.bump();
-
-    literal
+    literal_expression
   }
 
   fn parse_expession_call(&mut self) -> ExpressionCall {

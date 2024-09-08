@@ -22,7 +22,7 @@ pub enum Opcode {
   /// Will do nothing for a cycle
   Nop,
   /// Add two ints on top of the stack and push the result
-  IAdd,
+  Add,
   /// Multiply two ints on top of the stack and push the result
   IMul,
   /// Substract two ints on top of the stack and push the result
@@ -93,7 +93,7 @@ impl fmt::Display for Opcode {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match self {
       Self::Nop => write!(f, "[Nop]"),
-      Self::IAdd => write!(f, "[iadd]"),
+      Self::Add => write!(f, "[add]"),
       Self::Return => write!(f, "[return]"),
       Self::ReturnTop => write!(f, "[ireturn]"),
       Self::Invoke(name) => write!(f, "[invoke] {}", name),

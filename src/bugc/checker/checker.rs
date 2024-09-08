@@ -75,7 +75,16 @@ impl<'a> Checker<'a> {
     match expression {
       StatementExpression::Call(call) => self.check_expression_call(call),
       StatementExpression::Literal(literal) => self.check_expression_literal(literal),
+      StatementExpression::Binary(binary_expression) => self.check_expression_binary(binary_expression),
     }
+  }
+
+  fn check_expression_binary(&mut self, binary_expression: &'a ExpressionBinary) {
+    if self.stack_depth < 2 {
+      self.emit_missing_binexpr_operands(&binary_expression.location, &binary_expression.operator);
+      return;
+    }
+    self.stack_depth -= 1;
   }
 
   fn check_expression_call(&mut self, call: &'a ExpressionCall) {
@@ -148,6 +157,11 @@ impl<'a> Checker<'a> {
   fn emit_main_have_no_return(&mut self) {
     let message = format!("The `main` function must return `void`");
     self.diagnostics.emit(Diagnostic::Error(Error::new(None, message)));
+  }
+
+  fn emit_missing_binexpr_operands(&mut self, location: &'a Location, binop: &BinaryOperator) {
+    let message = format!("Binary operator `{binop}` expects `2` values on the stack but got `{}`", self.stack_depth);
+    self.diagnostics.emit(Diagnostic::Error(Error::new(Some(location), message)));
   }
 }
 

@@ -2,7 +2,7 @@ use super::token::{Location, Token, TokenKind};
 
 pub struct Lexer<'a> {
   input: &'a str,
-  _file_name: &'a str,
+  file_name: &'a str,
   cursor: usize,
   line: usize,
   colm: usize,
@@ -11,7 +11,7 @@ pub struct Lexer<'a> {
 
 impl<'a> Lexer<'a> {
   pub fn new(file_name: &'a str, input: &'a str) -> Self {
-    Lexer { _file_name: &file_name, input, cursor: 0, line: 1, colm: 1, location: Location::default() }
+    Lexer { file_name, input, cursor: 0, line: 1, colm: 1, location: Location::default() }
   }
 
   pub fn next_token(&mut self) -> Token {
@@ -24,13 +24,14 @@ impl<'a> Lexer<'a> {
     }
 
     match self.peek_one() {
+      '"' => self.read_string(),
+      '0'..='9' => self.read_number(),
       '@' => self.read_simple_token(TokenKind::At),
       '.' => self.read_simple_token(TokenKind::Dot),
+      '+' => self.read_simple_token(TokenKind::Plus),
       ';' => self.read_simple_token(TokenKind::Semicolon),
       '-' => self.read_check_ahead("->", TokenKind::Minus, TokenKind::Arrow),
-      '"' => self.read_string(),
       'a'..='z' | 'A'..='Z' | '_' => self.read_keyword_or_identifier(),
-      '0'..='9' => self.read_number(),
       _ => {
         panic!("[ERROR]: Unexpected token {}", self.peek_one());
       }
@@ -140,6 +141,3 @@ impl<'a> Lexer<'a> {
     return self.input[start..self.cursor].to_string();
   }
 }
-
-#[cfg(test)]
-mod tests {}
