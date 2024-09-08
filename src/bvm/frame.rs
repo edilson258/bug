@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::stack::Stack;
 use bug::bytecode::{ByteCodeStream, Opcode};
 use bug::Object;
@@ -32,12 +34,12 @@ impl Locals {
 pub struct Frame {
   pc: usize,
   locals: Locals,
-  code: ByteCodeStream,
+  code: Rc<ByteCodeStream>,
   stack: Stack<Object>,
 }
 
 impl Frame {
-  pub fn new(code: ByteCodeStream, max_locals: usize) -> Self {
+  pub fn new(code: Rc<ByteCodeStream>, max_locals: usize) -> Self {
     Self { pc: 0, code, stack: Stack::new(), locals: Locals::new(max_locals) }
   }
 
@@ -62,6 +64,6 @@ impl Frame {
 
 impl Default for Frame {
   fn default() -> Self {
-    Self { pc: 0, locals: Locals::new(0), code: ByteCodeStream::empty(), stack: Stack::new() }
+    Self { pc: 0, locals: Locals::new(0), code: Rc::new(ByteCodeStream::empty()), stack: Stack::new() }
   }
 }

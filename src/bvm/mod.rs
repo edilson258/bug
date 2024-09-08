@@ -1,5 +1,6 @@
 mod engine;
 mod frame;
+mod function;
 mod stack;
 
 use bug::stdlib::list_native_fns;
