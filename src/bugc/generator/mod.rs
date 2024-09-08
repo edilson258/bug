@@ -57,7 +57,12 @@ impl<'a> CodeGenerator<'a> {
     }
     self.current_scope.push_op(Opcode::Return);
 
-    let defined_fn = DefinedFn { arity: 0, code: self.current_scope.bytecode.clone(), max_locals: 0 };
+    let defined_fn = DefinedFn {
+      start_line: function.identifier.location.line,
+      arity: 0,
+      code: self.current_scope.bytecode.clone(),
+      max_locals: 0,
+    };
     self.functions.insert(function.get_name().to_owned(), defined_fn);
   }
 

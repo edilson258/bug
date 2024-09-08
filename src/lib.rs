@@ -59,9 +59,22 @@ pub struct Program {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DefinedFn {
+  pub start_line: usize,
   pub arity: usize,
   pub code: ByteCodeStream,
   pub max_locals: usize,
+}
+
+impl DefinedFn {
+  pub fn new(start_line: usize, arity: usize, code: ByteCodeStream, max_locals: usize) -> Self {
+    Self { start_line, arity, code, max_locals }
+  }
+}
+
+impl Default for DefinedFn {
+  fn default() -> Self {
+    Self { start_line: 0, arity: 0, code: ByteCodeStream::empty(), max_locals: 0 }
+  }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -80,10 +93,10 @@ impl Pool {
     index
   }
 
-  pub fn get_by_index(&self, i: usize) -> Object {
+  pub fn get_by_index(&self, i: usize) -> Option<&Object> {
     if self.entries.len() <= i {
-      panic!("[Error]: Pool index out of range")
+      return None;
     }
-    self.entries[i].clone()
+    Some(&self.entries[i])
   }
 }

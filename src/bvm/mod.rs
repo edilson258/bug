@@ -1,9 +1,8 @@
 mod engine;
 mod frame;
-mod function;
 mod stack;
 
-use bug::stdlib::list_native_fns;
+use bug::stdlib::list_natives;
 use bug::utils::read_file_bytes;
 use bug::Program;
 use engine::Engine;
@@ -30,6 +29,5 @@ fn main() {
     }
   };
 
-  let mut engine = Engine::bootstrap(program, list_native_fns());
-  engine.run();
+  Engine::bootstrap(program, list_natives()).run();
 }

@@ -1,8 +1,7 @@
-use std::rc::Rc;
-
 use crate::stack::Stack;
-use bug::bytecode::{ByteCodeStream, Opcode};
-use bug::Object;
+use bug::bytecode::Opcode;
+use bug::{DefinedFn, Object};
+use std::rc::Rc;
 
 #[derive(Debug, Clone)]
 pub struct Locals {
@@ -18,11 +17,8 @@ impl Locals {
     Self { inner }
   }
 
-  pub fn get_at(&self, index: usize) -> Object {
-    if index >= self.inner.len() {
-      panic!("[Error]: Couldn't access to locals by index {}: OutOfRange", index);
-    }
-    self.inner[index].clone()
+  pub fn get_at(&self, index: usize) -> Option<&Object> {
+    self.inner.get(index)
   }
 
   pub fn set_at(&mut self, index: usize, o: Object) {
@@ -34,17 +30,18 @@ impl Locals {
 pub struct Frame {
   pc: usize,
   locals: Locals,
-  code: Rc<ByteCodeStream>,
+  name: String,
+  function: Rc<DefinedFn>,
   stack: Stack<Object>,
 }
 
 impl Frame {
-  pub fn new(code: Rc<ByteCodeStream>, max_locals: usize) -> Self {
-    Self { pc: 0, code, stack: Stack::new(), locals: Locals::new(max_locals) }
+  pub fn new(name: String, function: Rc<DefinedFn>, max_locals: usize) -> Self {
+    Self { pc: 0, name, function, stack: Stack::new(), locals: Locals::new(max_locals) }
   }
 
-  pub fn fetch_next_op(&mut self) -> &Opcode {
-    let instr = self.code.get_at(self.pc).unwrap();
+  pub fn fetch_next_op(&mut self) -> Option<&Opcode> {
+    let instr = self.function.code.get_at(self.pc);
     self.pc += 1;
     instr
   }
@@ -53,17 +50,27 @@ impl Frame {
     self.stack.push(o);
   }
 
-  pub fn pop(&mut self) -> Object {
-    self.stack.pop().unwrap()
+  pub fn pop(&mut self) -> Option<Object> {
+    self.stack.pop()
   }
 
   pub fn store(&mut self, idx: usize, o: Object) {
     self.locals.set_at(idx, o);
   }
+
+  pub fn get_name(&self) -> &str {
+    &self.name
+  }
 }
 
 impl Default for Frame {
   fn default() -> Self {
-    Self { pc: 0, locals: Locals::new(0), code: Rc::new(ByteCodeStream::empty()), stack: Stack::new() }
+    Self {
+      pc: 0,
+      name: String::new(),
+      locals: Locals::new(0),
+      function: Rc::new(DefinedFn::default()),
+      stack: Stack::new(),
+    }
   }
 }

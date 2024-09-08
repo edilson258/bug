@@ -68,18 +68,16 @@ impl ByteCodeStream {
     self.code.push(opcode)
   }
 
-  pub fn push_at(&mut self, opcode: Opcode, offset: usize) {
+  pub fn push_at(&mut self, opcode: Opcode, offset: usize) -> bool {
     if offset >= self.code.len() {
-      panic!("Push opcode out of range offset");
+      return false;
     }
     self.code[offset] = opcode;
+    true
   }
 
   pub fn get_at(&self, offset: usize) -> Option<&Opcode> {
-    if offset >= self.code.len() {
-      return None;
-    }
-    return Some(&self.code[offset]);
+    self.code.get(offset)
   }
 
   pub fn get_pos(&self) -> usize {
