@@ -112,7 +112,11 @@ impl Engine {
   }
 
   fn return_(&mut self) {
-    if let Some(parent_frame) = self.frame_stack.pop() {
+    if let Some(mut parent_frame) = self.frame_stack.pop() {
+      match self.frame.pop() {
+        Some(o) => parent_frame.push(o),
+        _ => {}
+      };
       self.frame = parent_frame;
     } else {
       self.should_halt = true;

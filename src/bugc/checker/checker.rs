@@ -1,6 +1,6 @@
 use super::super::ast::*;
 use crate::frontend::token::Location;
-use bug::stdlib::{list_native_fns, NativeFn};
+use bug::stdlib::{list_natives, NativeFn};
 use bug::{FnPrototype, Type};
 use std::collections::HashMap;
 
@@ -13,7 +13,7 @@ pub struct Checker<'a> {
 
 impl<'a> Checker<'a> {
   pub fn new(ast: &'a Ast) -> Self {
-    Self { ast, ctx: Context::new(list_native_fns()), stack_depth: 0, diagnostics: Diagnostics::new() }
+    Self { ast, ctx: Context::new(list_natives()), stack_depth: 0, diagnostics: Diagnostics::new() }
   }
 
   pub fn check(&mut self) -> &Diagnostics {
