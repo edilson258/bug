@@ -1,6 +1,17 @@
 use super::token::{Token, TokenKind};
 use crate::span::Span;
 
+pub struct LexerError {
+  pub message: String,
+  pub location: Span,
+}
+
+impl LexerError {
+  fn new(message: String, location: Span) -> Self {
+    Self { message, location }
+  }
+}
+
 pub struct Lexer<'a> {
   input: &'a str,
   file_name: &'a str,
@@ -15,37 +26,35 @@ impl<'a> Lexer<'a> {
     Lexer { file_name, input, cursor: 0, line: 1, colm: 1, span: Span::default() }
   }
 
-  pub fn next_token(&mut self) -> Token {
+  pub fn next_token(&mut self) -> Result<Token, LexerError> {
     self.skip_whitespace();
     self.update_span();
-
     if self.is_eof() {
-      self.advance_one();
-      return Token { kind: TokenKind::Eof, span: self.get_span() };
+      return Ok(Token::new(TokenKind::Eof, self.get_span()));
     }
-
     match self.peek_one() {
+      '@' => Ok(self.read_simple_token(TokenKind::At)),
+      '.' => Ok(self.read_simple_token(TokenKind::Dot)),
+      '+' => Ok(self.read_simple_token(TokenKind::Plus)),
+      ';' => Ok(self.read_simple_token(TokenKind::Semicolon)),
+      '-' => Ok(self.read_check_ahead("->", TokenKind::Minus, TokenKind::Arrow)),
       '"' => self.read_string(),
       '0'..='9' => self.read_number(),
-      '@' => self.read_simple_token(TokenKind::At),
-      '.' => self.read_simple_token(TokenKind::Dot),
-      '+' => self.read_simple_token(TokenKind::Plus),
-      ';' => self.read_simple_token(TokenKind::Semicolon),
-      '-' => self.read_check_ahead("->", TokenKind::Minus, TokenKind::Arrow),
-      'a'..='z' | 'A'..='Z' | '_' => self.read_keyword_or_identifier(),
-      _ => {
-        panic!("[ERROR]: Unexpected token {}", self.peek_one());
-      }
+      'a'..='z' | 'A'..='Z' | '_' => Ok(self.read_keyword_or_identifier()),
+      _ => Err(LexerError::new(format!("Unexpected token `{}`", self.peek_one()), self.get_span())),
     }
   }
 
-  fn read_number(&mut self) -> Token {
-    let num = self.chop_while(|x| x.is_numeric() || x == '.');
-    let num = num.parse::<f32>().unwrap_or_else(|err| panic!("[ERROR]: Couldn't parse string to number {err}"));
-    Token::new(TokenKind::Number(num), self.get_span())
+  fn read_number(&mut self) -> Result<Token, LexerError> {
+    let raw_number = self.chop_while(|x| x.is_numeric() || x == '.');
+    let number = match raw_number.parse::<f32>() {
+      Ok(num) => num,
+      Err(err) => return Err(LexerError::new(format!("Couldn't parse number literal: {err}"), self.get_span())),
+    };
+    Ok(Token::new(TokenKind::Number(number), self.get_span()))
   }
 
-  fn read_string(&mut self) -> Token {
+  fn read_string(&mut self) -> Result<Token, LexerError> {
     self.advance_one();
     let text_start = self.cursor;
 
@@ -55,7 +64,7 @@ impl<'a> Lexer<'a> {
       }
 
       if self.is_eof() || self.peek_one() == '\n' {
-        panic!("[ERROR]: Unterminated string literal");
+        return Err(LexerError::new(format!("Unterminated string literal"), self.get_span()));
       }
 
       self.advance_one();
@@ -64,7 +73,7 @@ impl<'a> Lexer<'a> {
     let text = self.input[text_start..self.cursor].to_string();
     self.advance_one(); // eat right '"'
 
-    Token::new(TokenKind::String(text), self.get_span())
+    Ok(Token::new(TokenKind::String(text), self.get_span()))
   }
 
   fn advance_one(&mut self) {

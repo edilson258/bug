@@ -25,7 +25,13 @@ fn main() {
     }
   };
   let mut lexer = Lexer::new(&file, &file_content);
-  let ast = Parser::new(&mut lexer).parse();
+  let ast = match Parser::new(&mut lexer).parse() {
+    Ok(ast) => ast,
+    Err(err) => {
+      eprintln!("[Syntax Error]: {} at {:#?}", err.message, err.location);
+      return;
+    }
+  };
   if Checker::new(&ast).check().emit_all() > 0 {
     eprintln!("Aborting due to previuos errors.");
     std::process::exit(1);
