@@ -1,4 +1,5 @@
-use crate::frontend::token::{Location, Token, TokenKind};
+use crate::frontend::token::{Token, TokenKind};
+use crate::span::Span;
 
 pub type Ast = Vec<Statement>;
 
@@ -23,12 +24,12 @@ pub enum BinaryOperator {
 #[derive(Debug)]
 pub struct ExpressionBinary {
   pub operator: BinaryOperator,
-  pub location: Location,
+  pub span: Span,
 }
 
 impl ExpressionBinary {
-  pub fn new(operator: BinaryOperator, location: Location) -> Self {
-    Self { operator, location }
+  pub fn new(operator: BinaryOperator, span: Span) -> Self {
+    Self { operator, span }
   }
 }
 

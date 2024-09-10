@@ -58,7 +58,7 @@ impl<'a> CodeGenerator<'a> {
     self.current_scope.push_op(Opcode::Return);
 
     let defined_fn = DefinedFn {
-      start_line: function.identifier.location.line,
+      start_line: function.identifier.span.line,
       arity: 0,
       code: self.current_scope.bytecode.clone(),
       max_locals: 0,

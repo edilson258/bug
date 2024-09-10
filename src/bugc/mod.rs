@@ -2,6 +2,7 @@ mod ast;
 mod checker;
 mod frontend;
 mod generator;
+mod span;
 mod utils;
 
 use checker::checker::Checker;

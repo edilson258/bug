@@ -84,7 +84,7 @@ impl<'a> Parser<'a> {
       TokenKind::Plus => BinaryOperator::Add,
       _ => unreachable!(),
     };
-    let binary_expression = ExpressionBinary::new(op, self.current_token.location.clone());
+    let binary_expression = ExpressionBinary::new(op, self.current_token.span.clone());
     self.bump();
     binary_expression
   }
@@ -100,7 +100,7 @@ impl<'a> Parser<'a> {
   }
 
   fn parse_expession_call(&mut self) -> ExpressionCall {
-    let at_location = self.current_token.location.clone();
+    let mut at_span = self.current_token.span.clone();
     self.bump(); // eat '@'
 
     let name_token = match self.current_token.kind {
@@ -108,7 +108,7 @@ impl<'a> Parser<'a> {
       _ => panic!("Expected identifier after `f`"),
     };
     self.bump();
-
-    ExpressionCall::new(Token { kind: name_token.kind, location: at_location + name_token.location })
+    at_span.end = name_token.span.end;
+    ExpressionCall::new(Token { kind: name_token.kind, span: at_span })
   }
 }

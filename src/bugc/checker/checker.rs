@@ -1,5 +1,5 @@
 use super::super::ast::*;
-use crate::frontend::token::Location;
+use crate::span::Span;
 use bug::stdlib::{list_natives, NativeFn};
 use bug::{FnPrototype, Type};
 use std::collections::HashMap;
@@ -54,7 +54,7 @@ impl<'a> Checker<'a> {
   fn check_statement_function(&mut self, function: &'a StatementFunction) {
     if let Some(symb) = self.ctx.lookup(function.get_name()) {
       if symb.is_native || symb.scope_id == self.ctx.curr_scope_id {
-        self.emit_name_bound(&function.identifier.location, function.get_name());
+        self.emit_name_bound(&function.identifier.span, function.get_name());
       }
     }
 
@@ -81,7 +81,7 @@ impl<'a> Checker<'a> {
 
   fn check_expression_binary(&mut self, binary_expression: &'a ExpressionBinary) {
     if self.stack_depth < 2 {
-      self.emit_missing_binexpr_operands(&binary_expression.location, &binary_expression.operator);
+      self.emit_missing_binexpr_operands(&binary_expression.span, &binary_expression.operator);
       return;
     }
     self.stack_depth -= 1;
@@ -91,7 +91,7 @@ impl<'a> Checker<'a> {
     let symb = self.ctx.lookup(call.get_name());
 
     if symb.is_none() {
-      self.emit_name_unbound(&call.name_token.location, call.get_name());
+      self.emit_name_unbound(&call.name_token.span, call.get_name());
       return;
     }
 
@@ -101,12 +101,7 @@ impl<'a> Checker<'a> {
 
     if self.stack_depth < callee.arity as usize {
       let expected_count = callee.arity;
-      self.emit_invalid_args_count(
-        &call.name_token.location,
-        call.get_name(),
-        expected_count as usize,
-        self.stack_depth,
-      );
+      self.emit_invalid_args_count(&call.name_token.span, call.get_name(), expected_count as usize, self.stack_depth);
       return;
     }
 
@@ -129,19 +124,19 @@ impl<'a> Checker<'a> {
  */
 
 impl<'a> Checker<'a> {
-  fn emit_name_bound(&mut self, location: &'a Location, name: &str) {
+  fn emit_name_bound(&mut self, span: &'a Span, name: &str) {
     let message = format!("Redifinition of name `{name}`");
-    self.diagnostics.emit(Diagnostic::Error(Error::new(Some(location), message)));
+    self.diagnostics.emit(Diagnostic::Error(Error::new(Some(span), message)));
   }
 
-  fn emit_name_unbound(&mut self, location: &'a Location, name: &str) {
+  fn emit_name_unbound(&mut self, span: &'a Span, name: &str) {
     let message = format!("Cannot find name `{name}`");
-    self.diagnostics.emit(Diagnostic::Error(Error::new(Some(location), message)));
+    self.diagnostics.emit(Diagnostic::Error(Error::new(Some(span), message)));
   }
 
-  fn emit_invalid_args_count(&mut self, location: &'a Location, name: &str, expected: usize, found: usize) {
+  fn emit_invalid_args_count(&mut self, span: &'a Span, name: &str, expected: usize, found: usize) {
     let message = format!("Function `{name}` expects `{expected}` args but got `{found}`");
-    self.diagnostics.emit(Diagnostic::Error(Error::new(Some(location), message)));
+    self.diagnostics.emit(Diagnostic::Error(Error::new(Some(span), message)));
   }
 
   fn emit_missing_main(&mut self) {
@@ -159,21 +154,21 @@ impl<'a> Checker<'a> {
     self.diagnostics.emit(Diagnostic::Error(Error::new(None, message)));
   }
 
-  fn emit_missing_binexpr_operands(&mut self, location: &'a Location, binop: &BinaryOperator) {
+  fn emit_missing_binexpr_operands(&mut self, span: &'a Span, binop: &BinaryOperator) {
     let message = format!("Binary operator `{binop}` expects `2` values on the stack but got `{}`", self.stack_depth);
-    self.diagnostics.emit(Diagnostic::Error(Error::new(Some(location), message)));
+    self.diagnostics.emit(Diagnostic::Error(Error::new(Some(span), message)));
   }
 }
 
 #[derive(Debug)]
 struct Error<'a> {
   message: String,
-  location: Option<&'a Location>,
+  span: Option<&'a Span>,
 }
 
 impl<'a> Error<'a> {
-  fn new(location: Option<&'a Location>, message: String) -> Self {
-    Self { location, message }
+  fn new(span: Option<&'a Span>, message: String) -> Self {
+    Self { span, message }
   }
 }
 

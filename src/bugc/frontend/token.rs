@@ -1,4 +1,4 @@
-use std::ops::Add;
+use crate::span::Span;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenKind {
@@ -20,48 +20,26 @@ pub enum TokenKind {
 }
 
 #[derive(Debug, Clone)]
-pub struct Location {
-  pub line: usize,
-  pub column: usize,
-  pub start: usize,
-  pub end: usize,
-}
-
-impl Add<Location> for Location {
-  type Output = Location;
-
-  fn add(self, rhs: Location) -> Self::Output {
-    Location { line: self.line, column: self.column, start: self.start, end: rhs.end }
-  }
-}
-
-impl Default for Location {
-  fn default() -> Self {
-    Self { line: 0, column: 0, start: 0, end: 0 }
-  }
-}
-
-#[derive(Debug, Clone)]
 pub struct Token {
   pub kind: TokenKind,
-  pub location: Location,
+  pub span: Span,
 }
 
 impl Token {
-  pub fn new(kind: TokenKind, location: Location) -> Self {
-    Self { kind, location }
+  pub fn new(kind: TokenKind, span: Span) -> Self {
+    Self { kind, span }
   }
 
-  pub fn keyword_or_identifier(label: String, location: Location) -> Self {
+  pub fn keyword_or_identifier(label: String, span: Span) -> Self {
     match label.as_str() {
-      "f" => Token::new(TokenKind::Function, location),
-      _ => Token::new(TokenKind::Identifier(label), location),
+      "f" => Token::new(TokenKind::Function, span),
+      _ => Token::new(TokenKind::Identifier(label), span),
     }
   }
 }
 
 impl Default for Token {
   fn default() -> Self {
-    Token { kind: TokenKind::Eof, location: Location::default() }
+    Token { kind: TokenKind::Eof, span: Span::default() }
   }
 }
