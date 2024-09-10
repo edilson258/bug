@@ -11,20 +11,20 @@ use std::{env, io::Write};
 use utils::read_file;
 
 fn main() {
-  let args: Vec<String> = env::args().collect();
-  if args.len() <= 1 {
+  let command_line_args: Vec<String> = env::args().collect();
+  if command_line_args.len() <= 1 {
     eprintln!("[Error]: No input file provided");
     std::process::exit(1);
   }
-  let file = &args[1];
-  let file_content = match read_file(&file) {
+  let file_path = &command_line_args[1];
+  let file_content = match read_file(&file_path) {
     Ok(contents) => contents,
     Err(err) => {
-      eprintln!("[Error]: Couldn't read file {} {}", args[1], err.to_string());
+      eprintln!("[Error]: Couldn't read file {} {}", command_line_args[1], err.to_string());
       std::process::exit(1);
     }
   };
-  let mut lexer = Lexer::new(&file, &file_content);
+  let mut lexer = Lexer::new(&file_content);
   let ast = match Parser::new(&mut lexer).parse() {
     Ok(ast) => ast,
     Err(err) => {

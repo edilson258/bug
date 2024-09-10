@@ -13,17 +13,16 @@ impl LexerError {
 }
 
 pub struct Lexer<'a> {
-  input: &'a str,
-  file_name: &'a str,
-  cursor: usize,
   line: usize,
   colm: usize,
+  input: &'a str,
+  cursor: usize,
   span: Span,
 }
 
 impl<'a> Lexer<'a> {
-  pub fn new(file_name: &'a str, input: &'a str) -> Self {
-    Lexer { file_name, input, cursor: 0, line: 1, colm: 1, span: Span::default() }
+  pub fn new(input: &'a str) -> Self {
+    Lexer { input, cursor: 0, line: 1, colm: 1, span: Span::default() }
   }
 
   pub fn next_token(&mut self) -> Result<Token, LexerError> {
@@ -57,22 +56,17 @@ impl<'a> Lexer<'a> {
   fn read_string(&mut self) -> Result<Token, LexerError> {
     self.advance_one();
     let text_start = self.cursor;
-
     loop {
       if self.peek_one() == '"' {
         break;
       }
-
       if self.is_eof() || self.peek_one() == '\n' {
         return Err(LexerError::new(format!("Unterminated string literal"), self.get_span()));
       }
-
       self.advance_one();
     }
-
     let text = self.input[text_start..self.cursor].to_string();
     self.advance_one(); // eat right '"'
-
     Ok(Token::new(TokenKind::String(text), self.get_span()))
   }
 

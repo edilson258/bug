@@ -26,19 +26,15 @@ impl<'a> Checker<'a> {
 
   fn check_main_function(&mut self) {
     let main = self.ctx.lookup("main");
-
     if main.is_none() {
       return self.emit_missing_main();
     }
-
     let (arity, return_type) = match &main.unwrap().value {
       SymbolValue::Function(function) => (function.arity, function.return_type.clone()),
     };
-
     if arity != 0 {
       self.emit_main_takes_no_args();
     }
-
     if return_type != Type::Void {
       self.emit_main_have_no_return();
     }
@@ -57,17 +53,13 @@ impl<'a> Checker<'a> {
         self.emit_name_bound(&function.identifier.span, function.get_name());
       }
     }
-
     let fn_proto = FnPrototype { arity: 0, argtypes: vec![], return_type: Type::Void };
     let fn_symbol = Symbol::new(self.ctx.curr_scope_id, false, true, SymbolValue::Function(fn_proto));
     self.ctx.assign(function.get_name(), fn_symbol);
-
     self.ctx.enter_scope(ScopeKind::Function);
-
     for statement in &function.body {
       self.check_statement(statement);
     }
-
     self.ctx.leave_scope();
   }
 
@@ -89,24 +81,19 @@ impl<'a> Checker<'a> {
 
   fn check_expression_call(&mut self, call: &'a ExpressionCall) {
     let symb = self.ctx.lookup(call.get_name());
-
     if symb.is_none() {
       self.emit_name_unbound(&call.name_token.span, call.get_name());
       return;
     }
-
     let callee = match &symb.unwrap().value {
       SymbolValue::Function(x) => x,
     };
-
     if self.stack_depth < callee.arity as usize {
       let expected_count = callee.arity;
       self.emit_invalid_args_count(&call.name_token.span, call.get_name(), expected_count as usize, self.stack_depth);
       return;
     }
-
     self.stack_depth -= callee.arity as usize;
-
     if callee.return_type != Type::Void {
       self.stack_depth += 1
     }
@@ -249,11 +236,9 @@ struct Context<'a> {
 impl<'a> Context<'a> {
   fn new(natives: HashMap<String, NativeFn>) -> Self {
     let mut table: HashMap<String, Symbol> = HashMap::new();
-
     for (name, native) in natives {
       table.insert(name, Symbol::new(0, true, true, SymbolValue::Function(native.prototype)));
     }
-
     Self { curr_scope_id: 0, table, scopes: vec![Scope::new(0, ScopeKind::Gloabal)] }
   }
 
