@@ -4,8 +4,9 @@ use crate::span::Span;
 pub enum TokenKind {
   Eof,
 
-  Number(f32),
+  Integer(i32),
   String(String),
+
   Identifier(String),
 
   Function,
@@ -13,7 +14,13 @@ pub enum TokenKind {
   At,
   Dot,
   Arrow,
+  Comma,
   Semicolon,
+  LeftParent,
+  RightParent,
+
+  TypeInt,
+  TypeVoid,
 
   Minus,
   Plus,
@@ -32,7 +39,9 @@ impl Token {
 
   pub fn keyword_or_identifier(label: String, span: Span) -> Self {
     match label.as_str() {
-      "f" => Token::new(TokenKind::Function, span),
+      "fn" => Token::new(TokenKind::Function, span),
+      "int" => Token::new(TokenKind::TypeInt, span),
+      "void" => Token::new(TokenKind::TypeVoid, span),
       _ => Token::new(TokenKind::Identifier(label), span),
     }
   }

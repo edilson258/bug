@@ -1,5 +1,5 @@
-use crate::frontend::token::{Token, TokenKind};
 use crate::span::Span;
+use bug::Type;
 
 pub type Ast = Vec<Statement>;
 
@@ -10,6 +10,76 @@ pub enum Statement {
 }
 
 #[derive(Debug)]
+pub struct Identifier {
+  pub span: Span,
+  pub label: String,
+}
+
+impl Identifier {
+  pub fn new(span: Span, label: String) -> Self {
+    Self { span, label }
+  }
+}
+
+#[derive(Debug)]
+pub struct StatementFunction {
+  pub identifier: Identifier,
+  pub return_type: Type,
+  pub body: StatementBlock,
+  pub parameters: Parameters,
+  pub signature_span: Span,
+}
+
+#[derive(Debug)]
+pub struct Parameter {
+  pub identifier: Identifier,
+  pub typ: Type,
+  pub span: Span,
+}
+
+impl Parameter {
+  pub fn new(identifier: Identifier, typ: Type, span: Span) -> Self {
+    Self { identifier, typ, span }
+  }
+}
+
+#[derive(Debug)]
+pub struct StatementBlock {
+  pub span: Span,
+  pub statements: Vec<Statement>,
+}
+
+impl StatementBlock {
+  pub fn new() -> StatementBlock {
+    Self { statements: vec![], span: Span::default() }
+  }
+}
+
+#[derive(Debug)]
+pub struct Parameters {
+  pub parameters: Vec<Parameter>,
+  pub span: Span,
+}
+
+impl Parameters {
+  pub fn new() -> Self {
+    Self { parameters: vec![], span: Span::default() }
+  }
+}
+
+impl StatementFunction {
+  pub fn new(
+    identifier: Identifier,
+    parameters: Parameters,
+    return_type: Type,
+    body: StatementBlock,
+    signature_span: Span,
+  ) -> Self {
+    Self { identifier, parameters, return_type, body, signature_span }
+  }
+}
+
+#[derive(Debug)]
 pub enum StatementExpression {
   Call(ExpressionCall),
   Binary(ExpressionBinary),
@@ -17,8 +87,21 @@ pub enum StatementExpression {
 }
 
 #[derive(Debug)]
+pub struct ExpressionCall {
+  pub identifier: Identifier,
+  pub span: Span,
+}
+
+impl ExpressionCall {
+  pub fn new(span: Span, identifier: Identifier) -> Self {
+    Self { span, identifier }
+  }
+}
+
+#[derive(Debug)]
 pub enum BinaryOperator {
-  Add,
+  Plus,
+  Minus,
 }
 
 #[derive(Debug)]
@@ -36,25 +119,8 @@ impl ExpressionBinary {
 impl std::fmt::Display for BinaryOperator {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
-      Self::Add => write!(f, "+"),
-    }
-  }
-}
-
-#[derive(Debug)]
-pub struct ExpressionCall {
-  pub name_token: Token,
-}
-
-impl ExpressionCall {
-  pub fn new(name_token: Token) -> Self {
-    Self { name_token }
-  }
-
-  pub fn get_name(&self) -> &str {
-    match self.name_token.kind {
-      TokenKind::Identifier(ref name) => name,
-      _ => unreachable!(),
+      Self::Plus => write!(f, "+"),
+      Self::Minus => write!(f, "-"),
     }
   }
 }
@@ -62,60 +128,29 @@ impl ExpressionCall {
 #[derive(Debug)]
 pub enum ExpressionLiteral {
   String(LiteralString),
-  Number(NumberLiteral),
+  Integer(LiteralInteger),
 }
 
 #[derive(Debug)]
 pub struct LiteralString {
-  pub token: Token,
-}
-
-#[derive(Debug)]
-pub struct NumberLiteral {
-  pub token: Token,
-}
-
-#[derive(Debug)]
-pub struct StatementFunction {
-  pub identifier: Token,
-  pub body: Vec<Statement>,
-}
-
-impl StatementFunction {
-  pub fn new(identifier: Token, body: Vec<Statement>) -> Self {
-    Self { identifier, body }
-  }
-
-  pub fn get_name(&self) -> &str {
-    match self.identifier.kind {
-      TokenKind::Identifier(ref str) => str,
-      _ => unreachable!(),
-    }
-  }
+  pub span: Span,
+  pub inner: String,
 }
 
 impl LiteralString {
-  pub fn new(token: Token) -> Self {
-    Self { token }
-  }
-
-  pub fn get_data(&self) -> &str {
-    match &self.token.kind {
-      TokenKind::String(string) => string,
-      _ => unreachable!(),
-    }
+  pub fn new(span: Span, inner: String) -> Self {
+    Self { inner, span }
   }
 }
 
-impl NumberLiteral {
-  pub fn new(token: Token) -> Self {
-    Self { token }
-  }
+#[derive(Debug)]
+pub struct LiteralInteger {
+  pub span: Span,
+  pub inner: i32,
+}
 
-  pub fn get_data(&self) -> &f32 {
-    match &self.token.kind {
-      TokenKind::Number(number) => number,
-      _ => unreachable!(),
-    }
+impl LiteralInteger {
+  pub fn new(span: Span, inner: i32) -> Self {
+    Self { span, inner }
   }
 }

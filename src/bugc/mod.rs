@@ -1,13 +1,13 @@
 mod ast;
-mod checker;
-mod frontend;
-mod generator;
+mod lexer;
+mod parser;
 mod span;
+mod token;
 mod utils;
 
-use checker::checker::Checker;
-use frontend::{lexer::Lexer, parser::Parser};
-use std::{env, io::Write};
+use lexer::Lexer;
+use parser::Parser;
+use std::env;
 use utils::read_file;
 
 fn main() {
@@ -32,6 +32,8 @@ fn main() {
       return;
     }
   };
+  println!("{:#?}", ast);
+  /*
   if Checker::new(&ast).check().emit_all() > 0 {
     eprintln!("Aborting due to previuos errors.");
     std::process::exit(1);
@@ -45,5 +47,5 @@ fn main() {
   file.write(&program_binary).unwrap_or_else(|err| {
     eprintln!("[ERROR] Couldn't save serialized program into file: {}", err);
     std::process::exit(1);
-  });
+  }); */
 }

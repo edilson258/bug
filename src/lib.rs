@@ -28,10 +28,16 @@ impl fmt::Display for Type {
 }
 
 #[derive(Debug, Clone)]
-pub struct FnPrototype {
-  pub arity: u8,
-  pub argtypes: Vec<Type>,
+pub struct FunctionPrototype {
+  pub arity: usize,
   pub return_type: Type,
+  pub parameters_types: Vec<Type>,
+}
+
+impl FunctionPrototype {
+  pub fn new(arity: usize, return_type: Type, parameters_types: Vec<Type>) -> Self {
+    Self { arity, return_type, parameters_types }
+  }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

@@ -36,6 +36,9 @@ impl<'a> Lexer<'a> {
       '.' => Ok(self.read_simple_token(TokenKind::Dot)),
       '+' => Ok(self.read_simple_token(TokenKind::Plus)),
       ';' => Ok(self.read_simple_token(TokenKind::Semicolon)),
+      '(' => Ok(self.read_simple_token(TokenKind::LeftParent)),
+      ')' => Ok(self.read_simple_token(TokenKind::RightParent)),
+      ',' => Ok(self.read_simple_token(TokenKind::Comma)),
       '-' => Ok(self.read_check_ahead("->", TokenKind::Minus, TokenKind::Arrow)),
       '"' => self.read_string(),
       '0'..='9' => self.read_number(),
@@ -45,12 +48,12 @@ impl<'a> Lexer<'a> {
   }
 
   fn read_number(&mut self) -> Result<Token, LexerError> {
-    let raw_number = self.chop_while(|x| x.is_numeric() || x == '.');
-    let number = match raw_number.parse::<f32>() {
+    let raw_integer = self.chop_while(|x| x.is_numeric());
+    let integer = match raw_integer.parse::<i32>() {
       Ok(num) => num,
-      Err(err) => return Err(LexerError::new(format!("Couldn't parse number literal: {err}"), self.get_span())),
+      Err(err) => return Err(LexerError::new(format!("Couldn't parse integer literal: {err}"), self.get_span())),
     };
-    Ok(Token::new(TokenKind::Number(number), self.get_span()))
+    Ok(Token::new(TokenKind::Integer(integer), self.get_span()))
   }
 
   fn read_string(&mut self) -> Result<Token, LexerError> {
