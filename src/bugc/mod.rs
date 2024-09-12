@@ -1,10 +1,13 @@
 mod ast;
+mod checker;
 mod lexer;
 mod parser;
 mod span;
 mod token;
 mod utils;
 
+use bug::stdlib::list_natives;
+use checker::Checker;
 use lexer::Lexer;
 use parser::Parser;
 use std::env;
@@ -32,7 +35,8 @@ fn main() {
       return;
     }
   };
-  println!("{:#?}", ast);
+  let mut checker = Checker::new(&ast, list_natives());
+  checker.check();
   /*
   if Checker::new(&ast).check().emit_all() > 0 {
     eprintln!("Aborting due to previuos errors.");

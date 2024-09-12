@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-
 use crate::{FunctionPrototype, Object, Type};
 
 pub struct NativeFn {
