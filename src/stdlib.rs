@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use crate::{FunctionPrototype, Object, Type};
+use std::collections::HashMap;
 
 pub struct NativeFn {
   pub prototype: FunctionPrototype,

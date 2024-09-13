@@ -1,5 +1,6 @@
 mod ast;
 mod checker;
+mod highlighter;
 mod lexer;
 mod parser;
 mod span;
@@ -35,8 +36,10 @@ fn main() {
       return;
     }
   };
-  let mut checker = Checker::new(&ast, list_natives());
-  checker.check();
+  let mut checker = Checker::new(&file_path, &file_content, &ast, list_natives());
+  eprint!("{}", checker.check());
+  // println!("{}", highlight_error(&file_content.chars().collect::<Vec<char>>(), 0, 24));
+
   /*
   if Checker::new(&ast).check().emit_all() > 0 {
     eprintln!("Aborting due to previuos errors.");
