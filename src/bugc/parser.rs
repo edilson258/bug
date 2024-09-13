@@ -116,8 +116,19 @@ impl<'a> Parser<'a> {
       TokenKind::At => Ok(StatementExpression::Call(self.parse_expession_call()?)),
       TokenKind::String(_) | TokenKind::Integer(_) => Ok(StatementExpression::Literal(self.parse_expession_literal()?)),
       TokenKind::Plus => Ok(StatementExpression::Binary(self.parse_expression_binary()?)),
+      TokenKind::Identifier(_) => Ok(StatementExpression::Identifier(self.parse_expression_identifier()?)),
       _ => Err(ParserError::unexpected_expression_token(self.current_token.clone())),
     }
+  }
+
+  fn parse_expression_identifier(&mut self) -> Result<ExpressionIdentifier, ParserError> {
+    let name = match &self.current_token.kind {
+      TokenKind::Identifier(identifier) => identifier.clone(),
+      _ => unreachable!("Invalid identifier expression"),
+    };
+    let span = self.current_token.span.clone();
+    self.bump()?;
+    Ok(ExpressionIdentifier::new(name, span))
   }
 
   fn parse_expression_binary(&mut self) -> Result<ExpressionBinary, ParserError> {

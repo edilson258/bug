@@ -35,13 +35,20 @@ impl<'a> Checker<'a> {
   fn check_statement_function(&mut self, f: &StatementFunction) {
     let name = f.identifier.label.clone();
     if let Some(_) = self.ctx.lookup_locally(&name) {
-      self.error_name_already_used(name, &f.identifier.span);
+      self.error_name_already_used(&name, &f.identifier.span);
       return;
     }
     let param_types: Vec<Type> = f.parameters.parameters.iter().map(|p| p.typ.clone()).collect();
     let prototype = FunctionPrototype::new(param_types.len(), f.return_type.clone(), param_types);
-    self.ctx.declare_locally(name.clone(), Symbol::Function(prototype));
+    self.ctx.declare(name.clone(), Symbol::Function(prototype));
     self.ctx.enter_scope(ScopeType::Function);
+    for parameter in &f.parameters.parameters {
+      if let Some(_) = self.ctx.lookup_locally(&parameter.identifier.label) {
+        self.error_name_already_used(&parameter.identifier.label, &parameter.span);
+        return;
+      }
+      self.ctx.declare(parameter.identifier.label.clone(), Symbol::Variable(Variable { typ: parameter.typ.clone() }))
+    }
     for statement in &f.body.statements {
       self.check_statement(statement);
     }
@@ -57,18 +64,30 @@ impl<'a> Checker<'a> {
       StatementExpression::Call(call) => self.check_expression_call(call),
       StatementExpression::Binary(binary) => self.check_expression_binary(binary),
       StatementExpression::Literal(literal) => self.check_expression_literal(literal),
+      StatementExpression::Identifier(identifier) => self.check_expression_identifier(identifier),
+    };
+  }
+
+  fn check_expression_identifier(&mut self, identifier: &ExpressionIdentifier) {
+    let symbol = match self.ctx.lookup(&identifier.name) {
+      Some(symbol) => symbol,
+      None => return self.error_name_not_declared(&identifier.name, &identifier.span),
+    };
+    match symbol {
+      Symbol::Variable(v) => self.ctx.push(v.typ.clone(), identifier.span.clone()),
+      Symbol::Function(_) => unimplemented!(),
     };
   }
 
   fn check_expression_call(&mut self, call: &ExpressionCall) {
     let callee = self.ctx.lookup(&call.identifier.label);
     if callee.is_none() {
-      self.error_name_not_declared(call.identifier.label.clone(), &call.identifier.span);
+      self.error_name_not_declared(&call.identifier.label, &call.identifier.span);
       return;
     }
     let callee = match callee.unwrap() {
       Symbol::Function(f) => f.clone(),
-      // Otherwise throw "is not callable" error
+      _ => todo!("{} is not callable", call.identifier.label),
     };
     if self.ctx.stack_depth() < callee.arity {
       self.ctx.pop_many(self.ctx.stack_depth());
@@ -129,6 +148,11 @@ impl<'a> Checker<'a> {
 
 enum Symbol {
   Function(FunctionPrototype),
+  Variable(Variable),
+}
+
+struct Variable {
+  typ: Type,
 }
 
 enum ScopeType {
@@ -179,7 +203,7 @@ impl Context {
     self.scopes.get(self.scope_pointer).unwrap().table.get(name)
   }
 
-  fn declare_locally(&mut self, key: String, value: Symbol) {
+  fn declare(&mut self, key: String, value: Symbol) {
     self.scopes[self.scope_pointer].table.insert(key, value);
   }
 
@@ -235,7 +259,7 @@ impl Diagnostics {
 }
 
 impl<'a> Checker<'a> {
-  fn error_name_already_used(&mut self, name: String, span: &Span) {
+  fn error_name_already_used(&mut self, name: &str, span: &Span) {
     let mut error = String::new();
     error.push_str(&self.error_header(&span));
     error.push_str(&format!("Name `{}` is already used", name));
@@ -255,7 +279,7 @@ impl<'a> Checker<'a> {
     self.diagnostics.diagnostics.push(error);
   }
 
-  fn error_name_not_declared(&mut self, name: String, span: &Span) {
+  fn error_name_not_declared(&mut self, name: &str, span: &Span) {
     let mut error = String::new();
     error.push_str(&self.error_header(&span));
     error.push_str(&format!("Name `{}` is not declared", name));

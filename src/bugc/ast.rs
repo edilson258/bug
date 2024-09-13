@@ -84,6 +84,19 @@ pub enum StatementExpression {
   Call(ExpressionCall),
   Binary(ExpressionBinary),
   Literal(ExpressionLiteral),
+  Identifier(ExpressionIdentifier),
+}
+
+#[derive(Debug)]
+pub struct ExpressionIdentifier {
+  pub name: String,
+  pub span: Span,
+}
+
+impl ExpressionIdentifier {
+  pub fn new(name: String, span: Span) -> Self {
+    Self { name, span }
+  }
 }
 
 #[derive(Debug)]
