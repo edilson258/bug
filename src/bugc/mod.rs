@@ -29,15 +29,18 @@ fn main() {
     }
   };
   let mut lexer = Lexer::new(&file_content);
-  let ast = match Parser::new(&mut lexer).parse() {
+  let ast = match Parser::new(&file_path, &file_content, &mut lexer).parse() {
     Ok(ast) => ast,
     Err(err) => {
-      eprintln!("[Syntax Error]: {} at {:#?}", err.message, err.location);
-      return;
+      eprint!("{}", err);
+      std::process::exit(1);
     }
   };
   let mut checker = Checker::new(&file_path, &file_content, &ast, list_natives());
-  eprint!("{}", checker.check());
+  if let Some(diagnostics) = checker.check() {
+    eprint!("{}", diagnostics);
+    std::process::exit(1);
+  }
   // println!("{}", highlight_error(&file_content.chars().collect::<Vec<char>>(), 0, 24));
 
   /*

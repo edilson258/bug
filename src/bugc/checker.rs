@@ -18,11 +18,15 @@ impl<'a> Checker<'a> {
     Self { file_path, file_content, ast, ctx: Context::new(natives), diagnostics: Diagnostics::new() }
   }
 
-  pub fn check(&mut self) -> &Diagnostics {
+  pub fn check(&mut self) -> Option<&Diagnostics> {
     for statement in self.ast {
       self.check_statement(statement);
     }
-    &self.diagnostics
+    if self.diagnostics.diagnostics.is_empty() {
+      None
+    } else {
+      Some(&self.diagnostics)
+    }
   }
 
   fn check_statement(&mut self, statement: &Statement) {
@@ -44,7 +48,7 @@ impl<'a> Checker<'a> {
     self.ctx.enter_scope(ScopeType::Function);
     for parameter in &f.parameters.parameters {
       if let Some(_) = self.ctx.lookup_locally(&parameter.identifier.label) {
-        self.error_name_already_used(&parameter.identifier.label, &parameter.span);
+        self.error_name_already_used(&parameter.identifier.label, &parameter.identifier.span);
         return;
       }
       self.ctx.declare(parameter.identifier.label.clone(), Symbol::Variable(Variable { typ: parameter.typ.clone() }))
@@ -54,7 +58,7 @@ impl<'a> Checker<'a> {
     }
     let (returned_type, span) = self.ctx.pop().unwrap_or((Type::Void, f.body.span.clone()));
     if returned_type != f.return_type {
-      self.error_return_type(name, &span, f.return_type.clone(), returned_type);
+      self.error_return_type(&name, &span, &f.return_type, &returned_type);
     }
     self.ctx.leave_scope();
   }
@@ -91,13 +95,13 @@ impl<'a> Checker<'a> {
     };
     if self.ctx.stack_depth() < callee.arity {
       self.ctx.pop_many(self.ctx.stack_depth());
-      self.error_missing_args(call.identifier.label.clone(), &call.span);
+      self.error_missing_args(&call.identifier.label, &call.span);
       return;
     }
     let provided_args = self.ctx.pop_many(callee.arity);
     for ((provided_type, span), expected_type) in provided_args.into_iter().zip(callee.parameters_types) {
       if provided_type != expected_type {
-        self.error_arg_type_no_match(expected_type, provided_type, &span);
+        self.error_arg_type_no_match(&expected_type, &provided_type, &span);
       }
     }
     if callee.return_type != Type::Void {
@@ -114,7 +118,7 @@ impl<'a> Checker<'a> {
     let (lhs_type, lhs_span) = self.ctx.pop().unwrap();
     let span = Span::new(lhs_span.line, lhs_span.column, lhs_span.start, binary.span.end);
     if lhs_type != rhs_type {
-      self.error_binexpr_types_no_match(&binary.operator, lhs_type, rhs_type, &span);
+      self.error_binexpr_types_no_match(&binary.operator, &lhs_type, &rhs_type, &span);
       return;
     }
     match binary.operator {
@@ -127,14 +131,14 @@ impl<'a> Checker<'a> {
     match lhs {
       Type::Integer => self.ctx.push(Type::Integer, span),
       Type::String => self.ctx.push(Type::String, span),
-      _ => self.error_binexpr_types_no_match(&BinaryOperator::Plus, lhs, rhs, &span),
+      _ => self.error_binexpr_types_no_match(&BinaryOperator::Plus, &lhs, &rhs, &span),
     };
   }
 
   fn check_binary_minus(&mut self, lhs: Type, rhs: Type, span: Span) {
     match lhs {
       Type::Integer => self.ctx.push(Type::Integer, span),
-      _ => self.error_binexpr_types_no_match(&BinaryOperator::Minus, lhs, rhs, &span),
+      _ => self.error_binexpr_types_no_match(&BinaryOperator::Minus, &lhs, &rhs, &span),
     };
   }
 
@@ -260,69 +264,38 @@ impl Diagnostics {
 
 impl<'a> Checker<'a> {
   fn error_name_already_used(&mut self, name: &str, span: &Span) {
-    let mut error = String::new();
-    error.push_str(&self.error_header(&span));
-    error.push_str(&format!("Name `{}` is already used", name));
-    error.push_str("\n\n");
-    error.push_str(&highlight_error(&self.file_content, span.start, span.end));
-    error.push('\n');
-    self.diagnostics.diagnostics.push(error);
+    self.error(&format!("Name `{}` is already used", name), span);
   }
 
-  fn error_return_type(&mut self, name: String, span: &Span, expected: Type, provided: Type) {
-    let mut error = String::new();
-    error.push_str(&self.error_header(&span));
-    error.push_str(&format!("Function `{}` returns `{}` but got `{}` ", name, expected, provided));
-    error.push_str("\n\n");
-    error.push_str(&highlight_error(&self.file_content, span.start, span.end));
-    error.push('\n');
-    self.diagnostics.diagnostics.push(error);
+  fn error_return_type(&mut self, name: &str, span: &Span, expected: &Type, provided: &Type) {
+    self.error(&format!("Function `{}` returns `{}` but got `{}` ", name, expected, provided), span);
   }
 
   fn error_name_not_declared(&mut self, name: &str, span: &Span) {
-    let mut error = String::new();
-    error.push_str(&self.error_header(&span));
-    error.push_str(&format!("Name `{}` is not declared", name));
-    error.push_str("\n\n");
-    error.push_str(&highlight_error(&self.file_content, span.start, span.end));
-    error.push('\n');
-    self.diagnostics.diagnostics.push(error);
+    self.error(&format!("Name `{}` is not declared", name), span);
   }
 
-  fn error_missing_args(&mut self, name: String, span: &Span) {
-    let mut error = String::new();
-    error.push_str(&self.error_header(&span));
-    error.push_str(&format!("Missing arguments calling `{}`", name));
-    error.push_str("\n\n");
-    error.push_str(&highlight_error(&self.file_content, span.start, span.end));
-    error.push('\n');
-    self.diagnostics.diagnostics.push(error);
+  fn error_missing_args(&mut self, name: &str, span: &Span) {
+    self.error(&format!("Missing arguments calling `{}`", name), span);
   }
 
-  fn error_arg_type_no_match(&mut self, expected: Type, provided: Type, span: &Span) {
-    let mut error = String::new();
-    error.push_str(&self.error_header(&span));
-    error.push_str(&format!("Arguement of type `{}` is not assignable to parameter of type `{}`", provided, expected));
-    error.push_str("\n\n");
-    error.push_str(&highlight_error(&self.file_content, span.start, span.end));
-    error.push('\n');
-    self.diagnostics.diagnostics.push(error);
+  fn error_arg_type_no_match(&mut self, expected: &Type, provided: &Type, span: &Span) {
+    self
+      .error(&format!("Arguement of type `{}` is not assignable to parameter of type `{}`", provided, expected), span);
   }
 
-  fn error_binexpr_types_no_match(&mut self, op: &BinaryOperator, lhs_type: Type, rhs_type: Type, span: &Span) {
-    let mut error = String::new();
-    error.push_str(&self.error_header(&span));
-    error.push_str(&format!("Operator `{}` doesn't apply to types `{}` and `{}`", op, lhs_type, rhs_type));
-    error.push_str("\n\n");
-    error.push_str(&highlight_error(&self.file_content, span.start, span.end));
-    error.push('\n');
-    self.diagnostics.diagnostics.push(error);
+  fn error_binexpr_types_no_match(&mut self, op: &BinaryOperator, lhs_type: &Type, rhs_type: &Type, span: &Span) {
+    self.error(&format!("Operator `{}` doesn't apply to types `{}` and `{}`", op, lhs_type, rhs_type), span);
   }
 
   fn error_miss_binexpr_args(&mut self, op: &BinaryOperator, span: &Span) {
+    self.error(&format!("Missing arguments for `{}` operator", op), span);
+  }
+
+  fn error(&mut self, message: &str, span: &Span) {
     let mut error = String::new();
     error.push_str(&self.error_header(&span));
-    error.push_str(&format!("Missing arguments for `{}` operator", op));
+    error.push_str(message);
     error.push_str("\n\n");
     error.push_str(&highlight_error(&self.file_content, span.start, span.end));
     error.push('\n');

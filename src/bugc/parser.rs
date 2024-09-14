@@ -1,18 +1,21 @@
-use super::lexer::{Lexer, LexerError};
+use super::lexer::Lexer;
 use super::token::{Token, TokenKind};
 use crate::ast::*;
+use crate::highlighter::highlight_error;
 use crate::span::Span;
 use bug::Type;
 
 pub struct Parser<'a> {
+  raw: &'a str,
+  file_path: &'a str,
   current_token: Token,
   next_token: Token,
   lexer: &'a mut Lexer<'a>,
 }
 
 impl<'a> Parser<'a> {
-  pub fn new(lexer: &'a mut Lexer<'a>) -> Self {
-    Self { lexer, current_token: Token::default(), next_token: Token::default() }
+  pub fn new(file_path: &'a str, raw: &'a str, lexer: &'a mut Lexer<'a>) -> Self {
+    Self { file_path, raw, lexer, current_token: Token::default(), next_token: Token::default() }
   }
 
   pub fn parse(&mut self) -> Result<Ast, ParserError> {
@@ -29,14 +32,14 @@ impl<'a> Parser<'a> {
     self.current_token = self.next_token.clone();
     self.next_token = match self.lexer.next_token() {
       Ok(token) => token,
-      Err(error) => return Err(ParserError::from_lexer_error(error)),
+      Err(error) => return Err(self.error(&error.message, &error.location)),
     };
     Ok(())
   }
 
   fn bump_expect(&mut self, expected: TokenKind, message: &str) -> Result<(), ParserError> {
     if expected != self.current_token.kind {
-      return Err(ParserError::new(message.to_string(), self.current_token.span.clone()));
+      return Err(self.error(message, &self.current_token.span));
     }
     self.bump()
   }
@@ -84,7 +87,7 @@ impl<'a> Parser<'a> {
       match self.current_token.kind {
         TokenKind::Comma => self.bump()?,
         TokenKind::RightParent => break,
-        _ => return Err(ParserError::expect_either(")", ",", self.current_token.span.clone())),
+        _ => return Err(self.error_expect_either(")", ",", &self.current_token.span)),
       };
     }
     parameters.span.end = self.current_token.span.end;
@@ -96,7 +99,7 @@ impl<'a> Parser<'a> {
     let typ = match self.current_token.kind {
       TokenKind::TypeInt => Type::Integer,
       TokenKind::TypeVoid => Type::Void,
-      _ => return Err(ParserError::expect_type_annotation(self.current_token.span.clone())),
+      _ => return Err(self.error_expect_type_annotation(&self.current_token.span)),
     };
     self.bump()?;
     Ok(typ)
@@ -105,7 +108,7 @@ impl<'a> Parser<'a> {
   fn parse_identifier(&mut self) -> Result<Identifier, ParserError> {
     let identifier = match &self.current_token.kind {
       TokenKind::Identifier(label) => Identifier::new(self.current_token.span.clone(), label.clone()),
-      _ => return Err(ParserError::expect_identifier(self.current_token.span.clone())),
+      _ => return Err(self.error_expect_identifier(&self.current_token.span)),
     };
     self.bump()?;
     Ok(identifier)
@@ -117,7 +120,7 @@ impl<'a> Parser<'a> {
       TokenKind::String(_) | TokenKind::Integer(_) => Ok(StatementExpression::Literal(self.parse_expession_literal()?)),
       TokenKind::Plus => Ok(StatementExpression::Binary(self.parse_expression_binary()?)),
       TokenKind::Identifier(_) => Ok(StatementExpression::Identifier(self.parse_expression_identifier()?)),
-      _ => Err(ParserError::unexpected_expression_token(self.current_token.clone())),
+      _ => Err(self.error_unexpected_expression(&self.current_token.span)),
     }
   }
 
@@ -172,32 +175,46 @@ impl<'a> Parser<'a> {
 }
 
 pub struct ParserError {
-  pub message: String,
-  pub location: Span,
+  message: String,
 }
 
-impl ParserError {
-  fn new(message: String, location: Span) -> Self {
-    Self { message, location }
+impl core::fmt::Display for ParserError {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(f, "{}", self.message)
+  }
+}
+
+impl<'a> Parser<'a> {
+  fn error_expect_identifier(&self, span: &Span) -> ParserError {
+    self.error("Expecting an identifier", span)
   }
 
-  fn from_lexer_error(error: LexerError) -> Self {
-    Self { message: error.message, location: error.location }
+  fn error_unexpected_expression(&self, span: &Span) -> ParserError {
+    self.error("Unexpected expression", span)
   }
 
-  fn expect_identifier(location: Span) -> Self {
-    Self { message: format!("Expecting an identifier"), location }
+  fn error_expect_type_annotation(&self, span: &Span) -> ParserError {
+    self.error("Expecting type annotation", span)
   }
 
-  fn expect_type_annotation(location: Span) -> Self {
-    Self { message: format!("Expecting type annotation"), location }
+  fn error_expect_either(&self, fst: &str, scd: &str, span: &Span) -> ParserError {
+    self.error(&format!("Expecting either `{}` or `{}`", fst, scd), span)
   }
 
-  fn unexpected_expression_token(tkn: Token) -> Self {
-    Self { message: format!("Unexpected expression kind {:#?}", tkn.kind), location: tkn.span }
+  fn error(&self, message: &str, span: &Span) -> ParserError {
+    let mut error = String::new();
+    error.push_str(&self.error_header(&span));
+    error.push_str(message);
+    error.push_str("\n\n");
+    error.push_str(&&highlight_error(&self.raw, span.start, span.end));
+    error.push('\n');
+    ParserError { message: error }
   }
 
-  fn expect_either(fst: &str, scd: &str, location: Span) -> Self {
-    Self { message: format!("Expecting `{}` or `{}`", fst, scd), location }
+  fn error_header(&self, span: &Span) -> String {
+    format!(
+      "\x1b[38;5;4m{}\x1b[0m:\x1b[38;5;5m{}\x1b[0m:\x1b[38;5;5m{}\x1b[0m\x1b[1;31m ERROR\x1b[0m ",
+      self.file_path, span.line, span.column
+    )
   }
 }
