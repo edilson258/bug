@@ -1,8 +1,9 @@
 use crate::{frame::Frame, stack::Stack};
-use bug::bytecode::{Opcode, PushOperand};
+use bug::bytecode::Opcode;
 use bug::{stdlib::NativeFn, Program};
 use bug::{DefinedFn, Object, Pool};
 use std::collections::HashMap;
+use std::ops::Add;
 use std::rc::Rc;
 
 pub struct Engine {
@@ -44,12 +45,13 @@ impl Engine {
       };
 
       match op {
-        Opcode::Nop => self.nop(),
-        Opcode::Add => self.add(),
-        Opcode::Return => self.return_(),
-        Opcode::Ldc(idx) => self.ldc(idx),
-        Opcode::Invoke(name) => self.invoke(name),
-        Opcode::Push(operand) => self.push(operand),
+        Opcode::NOP => self.nop(),
+        Opcode::IADD => self.iadd(),
+        Opcode::RETURN => self.return_(),
+        Opcode::LDC(idx) => self.ldc(idx),
+        Opcode::LLOAD(idx) => self.lload(idx),
+        Opcode::INVOKE(name) => self.invoke(name),
+        Opcode::IPUSH(integer) => self.ipush(integer),
         _ => unimplemented!(),
       };
     }
@@ -70,51 +72,23 @@ impl Engine {
     return;
   }
 
-  fn add(&mut self) {
-    let rhs_object = match self.frame.pop() {
-      Some(o) => o,
+  fn iadd(&mut self) {
+    let rhs_integer = match self.frame.pop() {
+      Some(o) => match o {
+        Object::Integer(integer) => integer,
+        _ => unreachable!(),
+      },
       None => self.throw_stack_uderflow(),
     };
 
-    let lhs_object = match self.frame.pop() {
-      Some(o) => o,
+    let lhs_integer = match self.frame.pop() {
+      Some(o) => match o {
+        Object::Integer(integer) => integer,
+        _ => unreachable!(),
+      },
       None => self.throw_stack_uderflow(),
     };
-
-    match lhs_object {
-      Object::Number(lhs_number) => match rhs_object {
-        Object::Number(rhs_number) => self.frame.push(Object::Number(lhs_number + rhs_number)),
-        Object::Boolean(rhs_boolean) => match rhs_boolean {
-          true => self.frame.push(Object::Number(lhs_number + 1.)), // true == 1
-          false => self.frame.push(Object::Number(lhs_number)),     // false == 0
-        },
-        Object::String(_) => self.throw_add_number_to_string(),
-      },
-
-      Object::String(lhs_string) => match rhs_object {
-        Object::String(rhs_string) => self.frame.push(Object::String(lhs_string + rhs_string.as_str())),
-        Object::Number(_) => self.throw_add_number_to_string(),
-        Object::Boolean(_) => self.throw_add_boolean_to_string(),
-      },
-
-      Object::Boolean(lhs_boolean) => match rhs_object {
-        Object::Boolean(rhs_boolean) => match rhs_boolean {
-          true => match lhs_boolean {
-            true => self.frame.push(Object::Number(2.)),
-            false => self.frame.push(Object::Number(1.)),
-          },
-          false => match lhs_boolean {
-            true => self.frame.push(Object::Number(1.)),
-            false => self.frame.push(Object::Number(0.)),
-          },
-        },
-        Object::Number(rhs_number) => match lhs_boolean {
-          true => self.frame.push(Object::Number(rhs_number + 1.)), // true == 1
-          false => self.frame.push(Object::Number(rhs_number)),     // false == 0
-        },
-        Object::String(_) => self.throw_add_boolean_to_string(),
-      },
-    };
+    self.frame.push(Object::Integer(lhs_integer.add(rhs_integer)));
   }
 
   fn ldc(&mut self, idx: usize) {
@@ -152,23 +126,26 @@ impl Engine {
     self.frame = frame;
   }
 
-  fn push(&mut self, operand: PushOperand) {
-    match operand {
-      PushOperand::Number(x) => self.frame.push(Object::Number(x)),
-      PushOperand::Boolean(x) => self.frame.push(Object::Boolean(x)),
-    };
-  }
-
   fn return_(&mut self) {
     if let Some(mut parent_frame) = self.frame_stack.pop() {
       match self.frame.pop() {
         Some(o) => parent_frame.push(o),
-        _ => {}
+        None => {}
       };
       self.frame = parent_frame;
     } else {
+      // We got return on the main function
       self.should_halt = true;
     }
+  }
+
+  fn ipush(&mut self, integer: i32) {
+    self.frame.push(Object::Integer(integer));
+  }
+
+  fn lload(&mut self, idx: usize) {
+    let o = self.frame.load(idx).unwrap().clone();
+    self.frame.push(o);
   }
 }
 
@@ -193,18 +170,6 @@ impl Engine {
 
   fn throw_call_undefined(&self, name: &str) -> ! {
     eprintln!("RUNTIME EXCEPTION: Call to undefined function `{name}`");
-    eprintln!("    At function `{}`", self.frame.get_name());
-    std::process::exit(1);
-  }
-
-  fn throw_add_number_to_string(&self) -> ! {
-    eprintln!("RUNTIME EXCEPTION: Trying to add String and Number.");
-    eprintln!("    At function `{}`", self.frame.get_name());
-    std::process::exit(1);
-  }
-
-  fn throw_add_boolean_to_string(&self) -> ! {
-    eprintln!("RUNTIME EXCEPTION: Trying to add String and Boolean.");
     eprintln!("    At function `{}`", self.frame.get_name());
     std::process::exit(1);
   }

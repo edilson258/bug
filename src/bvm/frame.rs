@@ -12,7 +12,7 @@ impl Locals {
   pub fn new(max_locals: usize) -> Self {
     let mut inner: Vec<Object> = Vec::with_capacity(max_locals);
     for _ in 0..max_locals {
-      inner.push(Object::Number(0.)) // init locals with zeros
+      inner.push(Object::Integer(0)) // init locals with zeros
     }
     Self { inner }
   }
@@ -56,6 +56,10 @@ impl Frame {
 
   pub fn store(&mut self, idx: usize, o: Object) {
     self.locals.set_at(idx, o);
+  }
+
+  pub fn load(&mut self, idx: usize) -> Option<&Object> {
+    self.locals.get_at(idx)
   }
 
   pub fn get_name(&self) -> &str {
