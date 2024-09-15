@@ -121,11 +121,12 @@ pub enum BinaryOperator {
 pub struct ExpressionBinary {
   pub operator: BinaryOperator,
   pub span: Span,
+  pub operands_types: Option<Type>,
 }
 
 impl ExpressionBinary {
   pub fn new(operator: BinaryOperator, span: Span) -> Self {
-    Self { operator, span }
+    Self { operator, span, operands_types: None }
   }
 }
 

@@ -42,7 +42,7 @@ impl FunctionPrototype {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Object {
-  Number(f32),
+  Integer(i32),
   String(String),
   Boolean(bool),
 }
@@ -50,7 +50,7 @@ pub enum Object {
 impl fmt::Display for Object {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match self {
-      Self::Number(x) => write!(f, "{}", x),
+      Self::Integer(x) => write!(f, "{}", x),
       Self::String(x) => write!(f, "{}", x),
       Self::Boolean(x) => write!(f, "{}", x),
     }
@@ -61,6 +61,12 @@ impl fmt::Display for Object {
 pub struct Program {
   pub pool: Pool,
   pub fns: HashMap<String, DefinedFn>,
+}
+
+impl Program {
+  pub fn new() -> Self {
+    Self { pool: Pool::make(), fns: HashMap::new() }
+  }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -8,18 +8,17 @@ use std::collections::HashMap;
 pub struct Checker<'a> {
   file_path: &'a str,
   file_content: &'a str,
-  ast: &'a Ast,
   ctx: Context,
   diagnostics: Diagnostics,
 }
 
 impl<'a> Checker<'a> {
-  pub fn new(file_path: &'a str, file_content: &'a str, ast: &'a Ast, natives: HashMap<String, NativeFn>) -> Self {
-    Self { file_path, file_content, ast, ctx: Context::new(natives), diagnostics: Diagnostics::new() }
+  pub fn new(file_path: &'a str, file_content: &'a str, natives: HashMap<String, NativeFn>) -> Self {
+    Self { file_path, file_content, ctx: Context::new(natives), diagnostics: Diagnostics::new() }
   }
 
-  pub fn check(&mut self) -> Option<&Diagnostics> {
-    for statement in self.ast {
+  pub fn check(&mut self, ast: &'a mut Ast) -> Option<&Diagnostics> {
+    for statement in ast {
       self.check_statement(statement);
     }
     if self.diagnostics.diagnostics.is_empty() {
@@ -29,14 +28,14 @@ impl<'a> Checker<'a> {
     }
   }
 
-  fn check_statement(&mut self, statement: &Statement) {
+  fn check_statement(&mut self, statement: &mut Statement) {
     match statement {
       Statement::Function(f) => self.check_statement_function(f),
       Statement::Expression(expression) => self.check_statement_expression(expression),
     };
   }
 
-  fn check_statement_function(&mut self, f: &StatementFunction) {
+  fn check_statement_function(&mut self, f: &mut StatementFunction) {
     let name = f.identifier.label.clone();
     if let Some(_) = self.ctx.lookup_locally(&name) {
       self.error_name_already_used(&name, &f.identifier.span);
@@ -53,7 +52,7 @@ impl<'a> Checker<'a> {
       }
       self.ctx.declare(parameter.identifier.label.clone(), Symbol::Variable(Variable { typ: parameter.typ.clone() }))
     }
-    for statement in &f.body.statements {
+    for statement in &mut f.body.statements {
       self.check_statement(statement);
     }
     let (returned_type, span) = self.ctx.pop().unwrap_or((Type::Void, f.body.span.clone()));
@@ -63,7 +62,7 @@ impl<'a> Checker<'a> {
     self.ctx.leave_scope();
   }
 
-  fn check_statement_expression(&mut self, expression: &StatementExpression) {
+  fn check_statement_expression(&mut self, expression: &mut StatementExpression) {
     match expression {
       StatementExpression::Call(call) => self.check_expression_call(call),
       StatementExpression::Binary(binary) => self.check_expression_binary(binary),
@@ -109,7 +108,7 @@ impl<'a> Checker<'a> {
     }
   }
 
-  fn check_expression_binary(&mut self, binary: &ExpressionBinary) {
+  fn check_expression_binary(&mut self, binary: &mut ExpressionBinary) {
     if self.ctx.stack_depth() < 2 {
       self.error_miss_binexpr_args(&binary.operator, &binary.span);
       return;
@@ -121,6 +120,7 @@ impl<'a> Checker<'a> {
       self.error_binexpr_types_no_match(&binary.operator, &lhs_type, &rhs_type, &span);
       return;
     }
+    binary.operands_types = Some(lhs_type.clone());
     match binary.operator {
       BinaryOperator::Plus => self.check_binary_plus(lhs_type, rhs_type, span),
       BinaryOperator::Minus => self.check_binary_minus(lhs_type, rhs_type, span),
