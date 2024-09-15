@@ -1,0 +1,2 @@
+fn max(int l, int r) int -> l r > ? l : r;
+fn main() void -> 34 35 + 420 @max @write;

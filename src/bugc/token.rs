@@ -18,6 +18,7 @@ pub enum TokenKind {
   Semicolon,
   LeftParent,
   RightParent,
+  Colon,
 
   TypeInt,
   TypeVoid,
@@ -25,6 +26,8 @@ pub enum TokenKind {
 
   Minus,
   Plus,
+  RightAngle,
+  QuestionMark,
 }
 
 #[derive(Debug, Clone)]

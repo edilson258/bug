@@ -1,2 +1,2 @@
-fn sum(int x, int y) int -> x y +;
+fn sum(int x, int y) int -> x y  +;
 fn main() void -> 34 35 @sum @write; 

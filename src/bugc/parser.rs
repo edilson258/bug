@@ -119,10 +119,21 @@ impl<'a> Parser<'a> {
     match self.current_token.kind {
       TokenKind::At => Ok(StatementExpression::Call(self.parse_expession_call()?)),
       TokenKind::String(_) | TokenKind::Integer(_) => Ok(StatementExpression::Literal(self.parse_expession_literal()?)),
-      TokenKind::Plus => Ok(StatementExpression::Binary(self.parse_expression_binary()?)),
+      TokenKind::Plus | TokenKind::RightAngle => Ok(StatementExpression::Binary(self.parse_expression_binary()?)),
       TokenKind::Identifier(_) => Ok(StatementExpression::Identifier(self.parse_expression_identifier()?)),
+      TokenKind::QuestionMark => Ok(StatementExpression::Ternary(self.parse_expression_ternary()?)),
       _ => Err(self.error_unexpected_expression(&self.current_token.span)),
     }
+  }
+
+  fn parse_expression_ternary(&mut self) -> Result<ExpressionTernary, ParserError> {
+    let mut span = self.current_token.span.clone();
+    self.bump()?; // eat `?`
+    let consequence = self.parse_statement_expression()?;
+    self.bump_expect(TokenKind::Colon, "Expecting `:` after consequence expression of the ternary operator")?;
+    let alternative = self.parse_statement_expression()?;
+    span.end = alternative.get_span().end;
+    Ok(ExpressionTernary::new(consequence, alternative, span))
   }
 
   fn parse_expression_identifier(&mut self) -> Result<ExpressionIdentifier, ParserError> {
@@ -139,6 +150,7 @@ impl<'a> Parser<'a> {
     let op = match self.current_token.kind {
       TokenKind::Plus => BinaryOperator::Plus,
       TokenKind::Minus => BinaryOperator::Minus,
+      TokenKind::RightAngle => BinaryOperator::GratherThan,
       _ => unreachable!("Invalid binary operator {:#?}", self.current_token.kind),
     };
     let binary_expression = ExpressionBinary::new(op, self.current_token.span.clone());

@@ -40,10 +40,17 @@ impl<'a> Lexer<'a> {
       ')' => Ok(self.read_simple_token(TokenKind::RightParent)),
       ',' => Ok(self.read_simple_token(TokenKind::Comma)),
       '-' => Ok(self.read_check_ahead("->", TokenKind::Minus, TokenKind::Arrow)),
+      '>' => Ok(self.read_simple_token(TokenKind::RightAngle)),
+      '?' => Ok(self.read_simple_token(TokenKind::QuestionMark)),
+      ':' => Ok(self.read_simple_token(TokenKind::Colon)),
       '"' => self.read_string(),
       '0'..='9' => self.read_number(),
       'a'..='z' | 'A'..='Z' | '_' => Ok(self.read_keyword_or_identifier()),
-      _ => Err(LexerError::new(format!("Unexpected token `{}`", self.peek_one()), self.get_span())),
+      _ => {
+        let chr = self.peek_one();
+        self.advance_one();
+        return Err(LexerError::new(format!("Unexpected token `{}`", chr), self.get_span()));
+      }
     }
   }
 

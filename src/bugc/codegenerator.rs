@@ -69,7 +69,22 @@ impl CodeGenerator {
       StatementExpression::Binary(binary) => self.emit_expression_binary(binary),
       StatementExpression::Literal(literal) => self.emit_expression_literal(literal),
       StatementExpression::Identifier(identifier) => self.emit_expression_identifier(identifier),
+      StatementExpression::Ternary(ternary) => self.emit_expression_ternary(ternary),
     };
+  }
+
+  // fn max(int l, int r) int -> l r > ? l : r;
+
+  fn emit_expression_ternary(&mut self, ternary: ExpressionTernary) {
+    let before_cond_offset = self.context.code.code.len();
+    self.context.code.push(Opcode::NOP);
+    self.emit_statement_expression(*ternary.consequence);
+    let after_consq_offset = self.context.code.code.len();
+    self.context.code.push(Opcode::NOP);
+    self.emit_statement_expression(*ternary.alternative);
+    let after_alt_offset = self.context.code.code.len();
+    self.context.code.push_at(Opcode::JUMPNOTIF(after_consq_offset + 1), before_cond_offset);
+    self.context.code.push_at(Opcode::JUMP(after_alt_offset), after_consq_offset);
   }
 
   fn emit_expression_call(&mut self, call: ExpressionCall) {
@@ -81,6 +96,7 @@ impl CodeGenerator {
     match binary.operator {
       BinaryOperator::Plus => self.emit_binary_plus(operands_types),
       BinaryOperator::Minus => self.emit_binary_minus(operands_types),
+      BinaryOperator::GratherThan => self.emit_binary_gt(operands_types),
     };
   }
 
@@ -95,6 +111,13 @@ impl CodeGenerator {
   fn emit_binary_minus(&mut self, operands_types: Type) {
     match operands_types {
       Type::Integer => todo!(),
+      _ => unreachable!(),
+    }
+  }
+
+  fn emit_binary_gt(&mut self, operands_types: Type) {
+    match operands_types {
+      Type::Integer => self.context.push(Opcode::ICMPGT),
       _ => unreachable!(),
     }
   }

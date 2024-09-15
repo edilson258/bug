@@ -52,6 +52,9 @@ impl Engine {
         Opcode::LLOAD(idx) => self.lload(idx),
         Opcode::INVOKE(name) => self.invoke(name),
         Opcode::IPUSH(integer) => self.ipush(integer),
+        Opcode::ICMPGT => self.icmpgt(),
+        Opcode::JUMP(offset) => self.jump(offset),
+        Opcode::JUMPNOTIF(offset) => self.jumpnotif(offset),
         _ => unimplemented!(),
       };
     }
@@ -80,7 +83,6 @@ impl Engine {
       },
       None => self.throw_stack_uderflow(),
     };
-
     let lhs_integer = match self.frame.pop() {
       Some(o) => match o {
         Object::Integer(integer) => integer,
@@ -146,6 +148,47 @@ impl Engine {
   fn lload(&mut self, idx: usize) {
     let o = self.frame.load(idx).unwrap().clone();
     self.frame.push(o);
+  }
+
+  fn icmpgt(&mut self) {
+    let rhs = match self.frame.pop() {
+      Some(o) => match o {
+        Object::Integer(integer) => integer,
+        _ => unreachable!(),
+      },
+      None => self.throw_stack_uderflow(),
+    };
+    let lhs = match self.frame.pop() {
+      Some(o) => match o {
+        Object::Integer(integer) => integer,
+        _ => unreachable!(),
+      },
+      None => self.throw_stack_uderflow(),
+    };
+    if lhs > rhs {
+      self.frame.push(Object::Boolean(true))
+    } else {
+      self.frame.push(Object::Boolean(false))
+    }
+  }
+
+  fn jump(&mut self, offset: usize) {
+    self.frame.ip = offset;
+  }
+
+  fn jumpnotif(&mut self, offset: usize) {
+    let condition_obj = match self.frame.pop() {
+      Some(o) => o,
+      None => self.throw_stack_uderflow(),
+    };
+    let condition = match condition_obj {
+      Object::Boolean(b) => b,
+      _ => unreachable!(),
+    };
+    // jump if not will jump if the condition is false
+    if condition == false {
+      self.frame.ip = offset;
+    }
   }
 }
 

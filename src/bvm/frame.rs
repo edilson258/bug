@@ -28,21 +28,21 @@ impl Locals {
 
 #[derive(Debug, Clone)]
 pub struct Frame {
-  pc: usize,
-  locals: Locals,
-  name: String,
-  function: Rc<DefinedFn>,
-  stack: Stack<Object>,
+  pub ip: usize,
+  pub locals: Locals,
+  pub name: String,
+  pub function: Rc<DefinedFn>,
+  pub stack: Stack<Object>,
 }
 
 impl Frame {
   pub fn new(name: String, function: Rc<DefinedFn>, max_locals: usize) -> Self {
-    Self { pc: 0, name, function, stack: Stack::new(), locals: Locals::new(max_locals) }
+    Self { ip: 0, name, function, stack: Stack::new(), locals: Locals::new(max_locals) }
   }
 
   pub fn fetch_next_op(&mut self) -> Option<&Opcode> {
-    let instr = self.function.code.get_at(self.pc);
-    self.pc += 1;
+    let instr = self.function.code.get_at(self.ip);
+    self.ip += 1;
     instr
   }
 
@@ -70,7 +70,7 @@ impl Frame {
 impl Default for Frame {
   fn default() -> Self {
     Self {
-      pc: 0,
+      ip: 0,
       name: String::new(),
       locals: Locals::new(0),
       function: Rc::new(DefinedFn::default()),

@@ -6,12 +6,14 @@ pub enum Opcode {
   NOP,
   /// Add two ints on top of the stack and push the result
   IADD,
-  /// Multiply two ints on top of the stack and push the result
+  /// Will pop and compare the topest ints on the stack and then push true if the lhs is grather
+  /// than the rhs otherwise false
+  ICMPGT,
+  /// Will return from current function
   RETURN,
   /// Returns the value on the top of the current stack
-  ReturnTop,
-  /// Will make a function call by provided name
   INVOKE(String),
+  // Will load some Object from pool and push on the stack
   LDC(usize),
   /// Will load a value from locals at provided index to the stack
   LLOAD(usize),
@@ -19,6 +21,8 @@ pub enum Opcode {
   LSTORE(usize),
   /// Will push an imediate integer value to the stack
   IPUSH(i32),
+  JUMP(usize),
+  JUMPNOTIF(usize),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

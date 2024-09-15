@@ -70,8 +70,27 @@ impl<'a> Checker<'a> {
       StatementExpression::Binary(binary) => Ok(self.check_expression_binary(binary)?),
       StatementExpression::Literal(literal) => Ok(self.check_expression_literal(literal)?),
       StatementExpression::Identifier(identifier) => Ok(self.check_expression_identifier(identifier)?),
-      StatementExpression::Ternary(_ternary) => todo!(),
+      StatementExpression::Ternary(ternary) => self.check_expression_ternary(ternary),
     }
+  }
+
+  fn check_expression_ternary(&mut self, ternary: &mut ExpressionTernary) -> Result<(), String> {
+    if self.ctx.stack_depth() < 1 {
+      return Err(self.error_miss_ternary_cond(&ternary.span));
+    }
+    let (cond_typ, cond_span) = self.ctx.pop().unwrap();
+    if Type::Boolean != cond_typ {
+      return Err(self.error_unexpected_type(&Type::Boolean, &cond_typ, &cond_span));
+    }
+    self.check_statement_expression(&mut ternary.consequence)?;
+    let (consq_type, _) = self.ctx.pop().unwrap_or((Type::Void, ternary.span.clone()));
+    self.check_statement_expression(&mut ternary.alternative)?;
+    let (alt_type, _) = self.ctx.pop().unwrap_or((Type::Void, ternary.span.clone()));
+    if consq_type != alt_type {
+      return Err(self.error_ternary_arms_no_match(&consq_type, &alt_type, &ternary.span));
+    }
+    self.ctx.push(consq_type, ternary.span.clone());
+    Ok(())
   }
 
   fn check_expression_identifier(&mut self, identifier: &ExpressionIdentifier) -> Result<(), String> {
@@ -308,6 +327,21 @@ impl<'a> Checker<'a> {
 
   fn error_invalid_operator_operands(&mut self, op: &BinaryOperator, typ: &Type, span: &Span) -> String {
     self.error(&format!("Operator `{}` doesn't apply to values of type `{}`", op, typ), span)
+  }
+
+  fn error_miss_ternary_cond(&mut self, span: &Span) -> String {
+    self.error("Missing condition for the ternary operator", span)
+  }
+
+  fn error_unexpected_type(&mut self, expected: &Type, provided: &Type, span: &Span) -> String {
+    self.error(&format!("Expecting value of type `{}` but got `{}`", expected, provided), span)
+  }
+
+  fn error_ternary_arms_no_match(&mut self, consq_type: &Type, alt_type: &Type, span: &Span) -> String {
+    let mut message = String::new();
+    message.push_str("`?` operator arms have different types\n");
+    message.push_str(&format!("\tFirst arm returns `{}` and alternative returns `{}`", consq_type, alt_type));
+    self.error(&message, span)
   }
 
   fn error(&mut self, message: &str, span: &Span) -> String {

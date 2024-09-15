@@ -85,6 +85,35 @@ pub enum StatementExpression {
   Binary(ExpressionBinary),
   Literal(ExpressionLiteral),
   Identifier(ExpressionIdentifier),
+  Ternary(ExpressionTernary),
+}
+
+impl StatementExpression {
+  pub fn get_span(&self) -> Span {
+    match &self {
+      Self::Call(call) => call.span.clone(),
+      Self::Binary(binary) => binary.span.clone(),
+      Self::Literal(literal) => match literal {
+        ExpressionLiteral::String(string) => string.span.clone(),
+        ExpressionLiteral::Integer(integer) => integer.span.clone(),
+      },
+      Self::Identifier(identifier) => identifier.span.clone(),
+      Self::Ternary(ternary) => ternary.span.clone(),
+    }
+  }
+}
+
+#[derive(Debug)]
+pub struct ExpressionTernary {
+  pub consequence: Box<StatementExpression>,
+  pub alternative: Box<StatementExpression>,
+  pub span: Span,
+}
+
+impl ExpressionTernary {
+  pub fn new(consequence: StatementExpression, alternative: StatementExpression, span: Span) -> Self {
+    Self { consequence: Box::new(consequence), alternative: Box::new(alternative), span }
+  }
 }
 
 #[derive(Debug)]
@@ -115,6 +144,7 @@ impl ExpressionCall {
 pub enum BinaryOperator {
   Plus,
   Minus,
+  GratherThan,
 }
 
 #[derive(Debug)]
@@ -135,6 +165,7 @@ impl std::fmt::Display for BinaryOperator {
     match self {
       Self::Plus => write!(f, "+"),
       Self::Minus => write!(f, "-"),
+      Self::GratherThan => write!(f, ">"),
     }
   }
 }
