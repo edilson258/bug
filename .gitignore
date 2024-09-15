@@ -1,3 +1,4 @@
 /target
 out.bin
 test.bug
+*.bin

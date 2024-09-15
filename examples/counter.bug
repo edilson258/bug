@@ -1,6 +1,0 @@
-f count(int i, int stop, int step) ->
-  i stop > if -> return;
-  i .write
-  i step + stop step .count;
-
-f main -> 0 10 2 .count;

@@ -1,7 +1,0 @@
-f fib(int x, int y, int stop) ->
-  y stop > if -> return; 
-  y .write 
-  y x y + stop .fib;
-
-f main ->
-  0 1 150 .fib;

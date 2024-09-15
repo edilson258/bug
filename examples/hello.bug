@@ -1,3 +1,1 @@
-f bar -> "Wassup from Bar." @write.
-f foo -> "Hi from Foo!" @write @bar "Flow".
-f main -> "Hello, world!" @write @foo @write.
+fn main() void -> "Hello, world!" @write;
