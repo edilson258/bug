@@ -99,6 +99,7 @@ impl<'a> Parser<'a> {
     let typ = match self.current_token.kind {
       TokenKind::TypeInt => Type::Integer,
       TokenKind::TypeVoid => Type::Void,
+      TokenKind::TypeStr => Type::String,
       _ => return Err(self.error_expect_type_annotation(&self.current_token.span)),
     };
     self.bump()?;

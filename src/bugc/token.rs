@@ -21,6 +21,7 @@ pub enum TokenKind {
 
   TypeInt,
   TypeVoid,
+  TypeStr,
 
   Minus,
   Plus,
@@ -42,6 +43,7 @@ impl Token {
       "fn" => Token::new(TokenKind::Function, span),
       "int" => Token::new(TokenKind::TypeInt, span),
       "void" => Token::new(TokenKind::TypeVoid, span),
+      "str" => Token::new(TokenKind::TypeStr, span),
       _ => Token::new(TokenKind::Identifier(label), span),
     }
   }
