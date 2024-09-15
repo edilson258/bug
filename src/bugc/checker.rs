@@ -19,7 +19,9 @@ impl<'a> Checker<'a> {
 
   pub fn check(&mut self, ast: &'a mut Ast) -> Option<&Diagnostics> {
     for statement in ast {
-      self.check_statement(statement);
+      if let Some(err) = self.check_statement(statement).err() {
+        self.diagnostics.diagnostics.push(err);
+      }
     }
     if self.diagnostics.diagnostics.is_empty() {
       None
@@ -28,18 +30,17 @@ impl<'a> Checker<'a> {
     }
   }
 
-  fn check_statement(&mut self, statement: &mut Statement) {
+  fn check_statement(&mut self, statement: &mut Statement) -> Result<(), String> {
     match statement {
-      Statement::Function(f) => self.check_statement_function(f),
-      Statement::Expression(expression) => self.check_statement_expression(expression),
-    };
+      Statement::Function(f) => Ok(self.check_statement_function(f)?),
+      Statement::Expression(expression) => Ok(self.check_statement_expression(expression)?),
+    }
   }
 
-  fn check_statement_function(&mut self, f: &mut StatementFunction) {
+  fn check_statement_function(&mut self, f: &mut StatementFunction) -> Result<(), String> {
     let name = f.identifier.label.clone();
     if let Some(_) = self.ctx.lookup_locally(&name) {
-      self.error_name_already_used(&name, &f.identifier.span);
-      return;
+      return Err(self.error_name_already_used(&name, &f.identifier.span));
     }
     let param_types: Vec<Type> = f.parameters.parameters.iter().map(|p| p.typ.clone()).collect();
     let prototype = FunctionPrototype::new(param_types.len(), f.return_type.clone(), param_types);
@@ -47,46 +48,49 @@ impl<'a> Checker<'a> {
     self.ctx.enter_scope(ScopeType::Function);
     for parameter in &f.parameters.parameters {
       if let Some(_) = self.ctx.lookup_locally(&parameter.identifier.label) {
-        self.error_name_already_used(&parameter.identifier.label, &parameter.identifier.span);
-        return;
+        return Err(self.error_name_already_used(&parameter.identifier.label, &parameter.identifier.span));
       }
       self.ctx.declare(parameter.identifier.label.clone(), Symbol::Variable(Variable { typ: parameter.typ.clone() }))
     }
     for statement in &mut f.body.statements {
-      self.check_statement(statement);
+      self.check_statement(statement)?;
     }
     let (returned_type, span) = self.ctx.pop().unwrap_or((Type::Void, f.body.span.clone()));
     if returned_type != f.return_type {
-      self.error_return_type(&name, &span, &f.return_type, &returned_type);
+      let err = self.error_return_type(&name, &span, &f.return_type, &returned_type);
+      self.diagnostics.diagnostics.push(err);
     }
     self.ctx.leave_scope();
+    Ok(())
   }
 
-  fn check_statement_expression(&mut self, expression: &mut StatementExpression) {
+  fn check_statement_expression(&mut self, expression: &mut StatementExpression) -> Result<(), String> {
     match expression {
-      StatementExpression::Call(call) => self.check_expression_call(call),
-      StatementExpression::Binary(binary) => self.check_expression_binary(binary),
-      StatementExpression::Literal(literal) => self.check_expression_literal(literal),
-      StatementExpression::Identifier(identifier) => self.check_expression_identifier(identifier),
-    };
+      StatementExpression::Call(call) => Ok(self.check_expression_call(call)?),
+      StatementExpression::Binary(binary) => Ok(self.check_expression_binary(binary)?),
+      StatementExpression::Literal(literal) => Ok(self.check_expression_literal(literal)?),
+      StatementExpression::Identifier(identifier) => Ok(self.check_expression_identifier(identifier)?),
+      StatementExpression::Ternary(_ternary) => todo!(),
+    }
   }
 
-  fn check_expression_identifier(&mut self, identifier: &ExpressionIdentifier) {
+  fn check_expression_identifier(&mut self, identifier: &ExpressionIdentifier) -> Result<(), String> {
     let symbol = match self.ctx.lookup(&identifier.name) {
       Some(symbol) => symbol,
-      None => return self.error_name_not_declared(&identifier.name, &identifier.span),
+      None => {
+        return Err(self.error_name_not_declared(&identifier.name, &identifier.span));
+      }
     };
     match symbol {
-      Symbol::Variable(v) => self.ctx.push(v.typ.clone(), identifier.span.clone()),
+      Symbol::Variable(v) => Ok(self.ctx.push(v.typ.clone(), identifier.span.clone())),
       Symbol::Function(_) => unimplemented!(),
-    };
+    }
   }
 
-  fn check_expression_call(&mut self, call: &ExpressionCall) {
+  fn check_expression_call(&mut self, call: &ExpressionCall) -> Result<(), String> {
     let callee = self.ctx.lookup(&call.identifier.label);
     if callee.is_none() {
-      self.error_name_not_declared(&call.identifier.label, &call.identifier.span);
-      return;
+      return Err(self.error_name_not_declared(&call.identifier.label, &call.identifier.span));
     }
     let callee = match callee.unwrap() {
       Symbol::Function(f) => f.clone(),
@@ -94,59 +98,64 @@ impl<'a> Checker<'a> {
     };
     if self.ctx.stack_depth() < callee.arity {
       self.ctx.pop_many(self.ctx.stack_depth());
-      self.error_missing_args(&call.identifier.label, &call.span);
-      return;
+      return Err(self.error_missing_args(&call.identifier.label, &call.span));
     }
     let provided_args = self.ctx.pop_many(callee.arity);
     for ((provided_type, span), expected_type) in provided_args.into_iter().zip(callee.parameters_types) {
       if provided_type != expected_type {
-        self.error_arg_type_no_match(&expected_type, &provided_type, &span);
+        let err = self.error_arg_type_no_match(&expected_type, &provided_type, &span);
+        self.diagnostics.diagnostics.push(err);
       }
     }
-    if callee.return_type != Type::Void {
-      self.ctx.push(callee.return_type, call.span.clone());
-    }
+    self.ctx.push(callee.return_type, call.span.clone());
+    Ok(())
   }
 
-  fn check_expression_binary(&mut self, binary: &mut ExpressionBinary) {
+  fn check_expression_binary(&mut self, binary: &mut ExpressionBinary) -> Result<(), String> {
     if self.ctx.stack_depth() < 2 {
-      self.error_miss_binexpr_args(&binary.operator, &binary.span);
-      return;
+      return Err(self.error_miss_binexpr_args(&binary.operator, &binary.span));
     }
     let (rhs_type, _) = self.ctx.pop().unwrap();
     let (lhs_type, lhs_span) = self.ctx.pop().unwrap();
     let span = Span::new(lhs_span.line, lhs_span.column, lhs_span.start, binary.span.end);
     if lhs_type != rhs_type {
-      self.error_binexpr_types_no_match(&binary.operator, &lhs_type, &rhs_type, &span);
-      return;
+      return Err(self.error_binexpr_types_no_match(&binary.operator, &lhs_type, &rhs_type, &span));
     }
     binary.operands_types = Some(lhs_type.clone());
     match binary.operator {
-      BinaryOperator::Plus => self.check_binary_plus(lhs_type, rhs_type, span),
-      BinaryOperator::Minus => self.check_binary_minus(lhs_type, rhs_type, span),
+      BinaryOperator::Plus => Ok(self.check_binary_plus(lhs_type, rhs_type, span)?),
+      BinaryOperator::Minus => Ok(self.check_binary_minus(lhs_type, rhs_type, span)?),
+      BinaryOperator::GratherThan => Ok(self.check_binary_gt(lhs_type, rhs_type, span)?),
     }
   }
 
-  fn check_binary_plus(&mut self, lhs: Type, rhs: Type, span: Span) {
+  fn check_binary_plus(&mut self, lhs: Type, _rhs: Type, span: Span) -> Result<(), String> {
     match lhs {
-      Type::Integer => self.ctx.push(Type::Integer, span),
-      Type::String => self.ctx.push(Type::String, span),
-      _ => self.error_binexpr_types_no_match(&BinaryOperator::Plus, &lhs, &rhs, &span),
-    };
+      Type::Integer => Ok(self.ctx.push(Type::Integer, span)),
+      Type::String => Ok(self.ctx.push(Type::String, span)),
+      _ => Err(self.error_invalid_operator_operands(&BinaryOperator::Plus, &lhs, &span)),
+    }
   }
 
-  fn check_binary_minus(&mut self, lhs: Type, rhs: Type, span: Span) {
+  fn check_binary_minus(&mut self, lhs: Type, _rhs: Type, span: Span) -> Result<(), String> {
     match lhs {
-      Type::Integer => self.ctx.push(Type::Integer, span),
-      _ => self.error_binexpr_types_no_match(&BinaryOperator::Minus, &lhs, &rhs, &span),
-    };
+      Type::Integer => Ok(self.ctx.push(Type::Integer, span)),
+      _ => Err(self.error_invalid_operator_operands(&BinaryOperator::Minus, &lhs, &span)),
+    }
   }
 
-  fn check_expression_literal(&mut self, literal: &ExpressionLiteral) {
+  fn check_binary_gt(&mut self, lhs: Type, _rhs: Type, span: Span) -> Result<(), String> {
+    match lhs {
+      Type::Integer => Ok(self.ctx.push(Type::Boolean, span)),
+      _ => Err(self.error_invalid_operator_operands(&BinaryOperator::GratherThan, &lhs, &span)),
+    }
+  }
+
+  fn check_expression_literal(&mut self, literal: &ExpressionLiteral) -> Result<(), String> {
     match literal {
-      ExpressionLiteral::String(string) => self.ctx.push(Type::String, string.span.clone()),
-      ExpressionLiteral::Integer(integer) => self.ctx.push(Type::Integer, integer.span.clone()),
-    };
+      ExpressionLiteral::String(string) => Ok(self.ctx.push(Type::String, string.span.clone())),
+      ExpressionLiteral::Integer(integer) => Ok(self.ctx.push(Type::Integer, integer.span.clone())),
+    }
   }
 }
 
@@ -165,18 +174,18 @@ enum ScopeType {
 }
 
 struct Scope {
-  typ: ScopeType,
+  _typ: ScopeType,
   table: HashMap<String, Symbol>,
   stack: Vec<(Type, Span)>,
 }
 
 impl Scope {
   fn new(typ: ScopeType) -> Self {
-    Self { typ, table: HashMap::new(), stack: vec![] }
+    Self { _typ: typ, table: HashMap::new(), stack: vec![] }
   }
 
   fn from(typ: ScopeType, table: HashMap<String, Symbol>) -> Self {
-    Self { typ, table, stack: vec![] }
+    Self { _typ: typ, table, stack: vec![] }
   }
 }
 
@@ -263,43 +272,52 @@ impl Diagnostics {
 }
 
 impl<'a> Checker<'a> {
-  fn error_name_already_used(&mut self, name: &str, span: &Span) {
-    self.error(&format!("Name `{}` is already used", name), span);
+  fn error_name_already_used(&mut self, name: &str, span: &Span) -> String {
+    self.error(&format!("Name `{}` is already used", name), span)
   }
 
-  fn error_return_type(&mut self, name: &str, span: &Span, expected: &Type, provided: &Type) {
-    self.error(&format!("Function `{}` returns `{}` but got `{}` ", name, expected, provided), span);
+  fn error_return_type(&mut self, name: &str, span: &Span, expected: &Type, provided: &Type) -> String {
+    self.error(&format!("Function `{}` returns `{}` but got `{}` ", name, expected, provided), span)
   }
 
-  fn error_name_not_declared(&mut self, name: &str, span: &Span) {
-    self.error(&format!("Name `{}` is not declared", name), span);
+  fn error_name_not_declared(&mut self, name: &str, span: &Span) -> String {
+    self.error(&format!("Name `{}` is not declared", name), span)
   }
 
-  fn error_missing_args(&mut self, name: &str, span: &Span) {
-    self.error(&format!("Missing arguments calling `{}`", name), span);
+  fn error_missing_args(&mut self, name: &str, span: &Span) -> String {
+    self.error(&format!("Missing arguments calling `{}`", name), span)
   }
 
-  fn error_arg_type_no_match(&mut self, expected: &Type, provided: &Type, span: &Span) {
-    self
-      .error(&format!("Arguement of type `{}` is not assignable to parameter of type `{}`", provided, expected), span);
+  fn error_arg_type_no_match(&mut self, expected: &Type, provided: &Type, span: &Span) -> String {
+    self.error(&format!("Arguement of type `{}` is not assignable to parameter of type `{}`", provided, expected), span)
   }
 
-  fn error_binexpr_types_no_match(&mut self, op: &BinaryOperator, lhs_type: &Type, rhs_type: &Type, span: &Span) {
-    self.error(&format!("Operator `{}` doesn't apply to types `{}` and `{}`", op, lhs_type, rhs_type), span);
+  fn error_binexpr_types_no_match(
+    &mut self,
+    op: &BinaryOperator,
+    lhs_type: &Type,
+    rhs_type: &Type,
+    span: &Span,
+  ) -> String {
+    self.error(&format!("Operator `{}` doesn't apply to types `{}` and `{}`", op, lhs_type, rhs_type), span)
   }
 
-  fn error_miss_binexpr_args(&mut self, op: &BinaryOperator, span: &Span) {
-    self.error(&format!("Missing arguments for `{}` operator", op), span);
+  fn error_miss_binexpr_args(&mut self, op: &BinaryOperator, span: &Span) -> String {
+    self.error(&format!("Missing arguments for `{}` operator", op), span)
   }
 
-  fn error(&mut self, message: &str, span: &Span) {
+  fn error_invalid_operator_operands(&mut self, op: &BinaryOperator, typ: &Type, span: &Span) -> String {
+    self.error(&format!("Operator `{}` doesn't apply to values of type `{}`", op, typ), span)
+  }
+
+  fn error(&mut self, message: &str, span: &Span) -> String {
     let mut error = String::new();
     error.push_str(&self.error_header(&span));
     error.push_str(message);
     error.push_str("\n\n");
     error.push_str(&highlight_error(&self.file_content, span.start, span.end));
     error.push('\n');
-    self.diagnostics.diagnostics.push(error);
+    error
   }
 
   fn error_header(&self, span: &Span) -> String {
