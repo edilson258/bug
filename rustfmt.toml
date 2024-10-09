@@ -1,4 +1,4 @@
-tab_spaces = 2
+tab_spaces = 4
 struct_variant_width = 70
 array_width = 120
 struct_lit_width = 120

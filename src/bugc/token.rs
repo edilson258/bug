@@ -2,58 +2,58 @@ use crate::span::Span;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenKind {
-  Eof,
+    Eof,
 
-  Integer(i32),
-  String(String),
+    Integer(i32),
+    String(String),
 
-  Identifier(String),
+    Identifier(String),
 
-  Function,
+    Function,
 
-  At,
-  Dot,
-  Arrow,
-  Comma,
-  Semicolon,
-  LeftParent,
-  RightParent,
-  Colon,
+    At,
+    Dot,
+    Arrow,
+    Comma,
+    Semicolon,
+    LeftParent,
+    RightParent,
+    Colon,
 
-  TypeInt,
-  TypeVoid,
-  TypeStr,
+    TypeInt,
+    TypeVoid,
+    TypeStr,
 
-  Minus,
-  Plus,
-  RightAngle,
-  QuestionMark,
+    Minus,
+    Plus,
+    RightAngle,
+    QuestionMark,
 }
 
 #[derive(Debug, Clone)]
 pub struct Token {
-  pub kind: TokenKind,
-  pub span: Span,
+    pub kind: TokenKind,
+    pub span: Span,
 }
 
 impl Token {
-  pub fn new(kind: TokenKind, span: Span) -> Self {
-    Self { kind, span }
-  }
-
-  pub fn keyword_or_identifier(label: String, span: Span) -> Self {
-    match label.as_str() {
-      "fn" => Token::new(TokenKind::Function, span),
-      "int" => Token::new(TokenKind::TypeInt, span),
-      "void" => Token::new(TokenKind::TypeVoid, span),
-      "str" => Token::new(TokenKind::TypeStr, span),
-      _ => Token::new(TokenKind::Identifier(label), span),
+    pub fn new(kind: TokenKind, span: Span) -> Self {
+        Self { kind, span }
     }
-  }
+
+    pub fn keyword_or_identifier(label: String, span: Span) -> Self {
+        match label.as_str() {
+            "fn" => Token::new(TokenKind::Function, span),
+            "int" => Token::new(TokenKind::TypeInt, span),
+            "void" => Token::new(TokenKind::TypeVoid, span),
+            "str" => Token::new(TokenKind::TypeStr, span),
+            _ => Token::new(TokenKind::Identifier(label), span),
+        }
+    }
 }
 
 impl Default for Token {
-  fn default() -> Self {
-    Token { kind: TokenKind::Eof, span: Span::default() }
-  }
+    fn default() -> Self {
+        Token { kind: TokenKind::Eof, span: Span::default() }
+    }
 }
