@@ -10,6 +10,27 @@ pub enum Statement {
 }
 
 #[derive(Debug)]
+pub struct StatementFunction {
+    pub identifier: Identifier,
+    pub return_type: Type,
+    pub body: StatementBlock,
+    pub parameters: Parameters,
+    pub _signature_span: Span,
+}
+
+impl StatementFunction {
+    pub fn new(
+        identifier: Identifier,
+        parameters: Parameters,
+        return_type: Type,
+        body: StatementBlock,
+        signature_span: Span,
+    ) -> Self {
+        Self { identifier, parameters, return_type, body, _signature_span: signature_span }
+    }
+}
+
+#[derive(Debug)]
 pub struct Identifier {
     pub span: Span,
     pub label: String,
@@ -19,15 +40,6 @@ impl Identifier {
     pub fn new(span: Span, label: String) -> Self {
         Self { span, label }
     }
-}
-
-#[derive(Debug)]
-pub struct StatementFunction {
-    pub identifier: Identifier,
-    pub return_type: Type,
-    pub body: StatementBlock,
-    pub parameters: Parameters,
-    pub _signature_span: Span,
 }
 
 #[derive(Debug)]
@@ -67,24 +79,12 @@ impl Parameters {
     }
 }
 
-impl StatementFunction {
-    pub fn new(
-        identifier: Identifier,
-        parameters: Parameters,
-        return_type: Type,
-        body: StatementBlock,
-        signature_span: Span,
-    ) -> Self {
-        Self { identifier, parameters, return_type, body, _signature_span: signature_span }
-    }
-}
-
 #[derive(Debug)]
 pub enum StatementExpression {
     Call(ExpressionCall),
     Binary(ExpressionBinary),
     Literal(ExpressionLiteral),
-    Identifier(ExpressionIdentifier),
+    Identifier(Identifier),
     Ternary(ExpressionTernary),
 }
 
@@ -113,18 +113,6 @@ pub struct ExpressionTernary {
 impl ExpressionTernary {
     pub fn new(consequence: StatementExpression, alternative: StatementExpression, span: Span) -> Self {
         Self { consequence: Box::new(consequence), alternative: Box::new(alternative), span }
-    }
-}
-
-#[derive(Debug)]
-pub struct ExpressionIdentifier {
-    pub name: String,
-    pub span: Span,
-}
-
-impl ExpressionIdentifier {
-    pub fn new(name: String, span: Span) -> Self {
-        Self { name, span }
     }
 }
 

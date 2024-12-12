@@ -94,11 +94,11 @@ impl<'a> Checker<'a> {
         Ok(())
     }
 
-    fn check_expression_identifier(&mut self, identifier: &ExpressionIdentifier) -> Result<(), String> {
-        let symbol = match self.ctx.lookup(&identifier.name) {
+    fn check_expression_identifier(&mut self, identifier: &Identifier) -> Result<(), String> {
+        let symbol = match self.ctx.lookup(&identifier.label) {
             Some(symbol) => symbol,
             None => {
-                return Err(self.error_name_not_declared(&identifier.name, &identifier.span));
+                return Err(self.error_name_not_declared(&identifier.label, &identifier.span));
             }
         };
         match symbol {

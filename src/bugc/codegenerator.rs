@@ -138,8 +138,8 @@ impl CodeGenerator {
         self.context.push(Opcode::LDC(index));
     }
 
-    fn emit_expression_identifier(&mut self, identifier: ExpressionIdentifier) {
-        if let Some(index) = self.context.locals.get(&identifier.name) {
+    fn emit_expression_identifier(&mut self, identifier: Identifier) {
+        if let Some(index) = self.context.locals.get(&identifier.label) {
             self.context.push(Opcode::LLOAD(*index));
         } else {
             unreachable!()

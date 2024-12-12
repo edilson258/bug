@@ -138,14 +138,14 @@ impl<'a> Parser<'a> {
         Ok(ExpressionTernary::new(consequence, alternative, span))
     }
 
-    fn parse_expression_identifier(&mut self) -> Result<ExpressionIdentifier, ParserError> {
-        let name = match &self.current_token.kind {
+    fn parse_expression_identifier(&mut self) -> Result<Identifier, ParserError> {
+        let label = match &self.current_token.kind {
             TokenKind::Identifier(identifier) => identifier.clone(),
             _ => unreachable!("Invalid identifier expression"),
         };
         let span = self.current_token.span.clone();
         self.bump()?;
-        Ok(ExpressionIdentifier::new(name, span))
+        Ok(Identifier::new(span, label))
     }
 
     fn parse_expression_binary(&mut self) -> Result<ExpressionBinary, ParserError> {
