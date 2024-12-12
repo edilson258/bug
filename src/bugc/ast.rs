@@ -1,4 +1,4 @@
-use crate::span::Span;
+use super::span::Span;
 use bug::Type;
 
 pub type Ast = Vec<Statement>;

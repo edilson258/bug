@@ -1,6 +1,6 @@
-use crate::ast::*;
-use crate::highlighter::highlight_error;
-use crate::span::Span;
+use super::ast::*;
+use super::highlighter::highlight_error;
+use super::span::Span;
 use bug::stdlib::NativeFn;
 use bug::{FunctionPrototype, Type};
 use std::collections::HashMap;

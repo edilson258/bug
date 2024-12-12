@@ -1,4 +1,4 @@
-use crate::ast::*;
+use super::ast::*;
 use bug::*;
 use bytecode::{ByteCodeStream, Opcode};
 use std::collections::HashMap;
@@ -33,11 +33,11 @@ impl CodeGenerator {
         Self { program: Program::new(), context: Context::new() }
     }
 
-    pub fn emit(&mut self, ast: Ast) -> &Program {
+    pub fn emit(&mut self, ast: Ast) -> Program {
         for statement in ast {
             self.emit_statement(statement);
         }
-        &self.program
+        self.program.clone()
     }
 
     fn emit_statement(&mut self, statement: Statement) {

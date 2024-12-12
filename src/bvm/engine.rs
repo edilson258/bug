@@ -1,4 +1,4 @@
-use crate::{frame::Frame, stack::Stack};
+use super::{frame::Frame, stack::Stack};
 use bug::bytecode::Opcode;
 use bug::{stdlib::NativeFn, Program};
 use bug::{DefinedFn, Object, Pool};
@@ -10,7 +10,7 @@ pub struct Engine {
     pool: Pool,
     frame: Frame,
     should_halt: bool,
-    frame_stack: Stack<Frame>,
+    pub frame_stack: Stack<Frame>,
     // A set of built-in functions like `write`
     natives: HashMap<String, NativeFn>,
     // A set of user defined functions

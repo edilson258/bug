@@ -1,5 +1,5 @@
+use super::span::Span;
 use super::token::{Token, TokenKind};
-use crate::span::Span;
 
 pub struct LexerError {
     pub message: String,

@@ -3,7 +3,7 @@ pub struct Stack<T> {
     pub inner: Vec<T>,
 }
 
-impl<T: Clone> Stack<T> {
+impl<T: Clone + Sized> Stack<T> {
     pub fn new() -> Self {
         Self { inner: vec![] }
     }

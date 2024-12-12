@@ -1,4 +1,4 @@
-use crate::stack::Stack;
+use super::stack::Stack;
 use bug::bytecode::Opcode;
 use bug::{DefinedFn, Object};
 use std::rc::Rc;

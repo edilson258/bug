@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 mod ast;
 mod checker;
 mod codegenerator;
@@ -6,9 +8,9 @@ mod lexer;
 mod parser;
 mod span;
 mod token;
-mod utils;
+pub mod utils;
 
-use bug::stdlib::list_natives;
+use bug::{stdlib::list_natives, Program};
 use checker::Checker;
 use codegenerator::CodeGenerator;
 use lexer::Lexer;
@@ -16,17 +18,11 @@ use parser::Parser;
 use std::{env, io::Write};
 use utils::{get_file_stem, read_file};
 
-fn main() {
-    let command_line_args: Vec<String> = env::args().collect();
-    if command_line_args.len() <= 1 {
-        eprintln!("[Error]: No input file provided");
-        std::process::exit(1);
-    }
-    let file_path = &command_line_args[1];
+pub fn compile(file_path: &str) -> Program {
     let file_content = match read_file(&file_path) {
         Ok(contents) => contents,
         Err(err) => {
-            eprintln!("[Error]: Couldn't read file {} {}", command_line_args[1], err.to_string());
+            eprintln!("[Error]: Couldn't read file {} {}", file_path, err.to_string());
             std::process::exit(1);
         }
     };
@@ -45,7 +41,17 @@ fn main() {
     }
     let mut generator = CodeGenerator::setup();
     let program = generator.emit(ast);
-    // println!("{:#?}", program);
+    return program;
+}
+
+fn main() {
+    let command_line_args: Vec<String> = env::args().collect();
+    if command_line_args.len() <= 1 {
+        eprintln!("[Error]: No input file provided");
+        std::process::exit(1);
+    }
+    let file_path = &command_line_args[1];
+    let program = compile(file_path);
     let program_binary = bincode::serialize(&program).unwrap_or_else(|err| {
         eprintln!("[ERROR]: Couldn't serialize your program: {}", err.to_string());
         std::process::exit(1);

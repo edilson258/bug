@@ -1,8 +1,8 @@
+use super::ast::*;
+use super::highlighter::highlight_error;
 use super::lexer::Lexer;
+use super::span::Span;
 use super::token::{Token, TokenKind};
-use crate::ast::*;
-use crate::highlighter::highlight_error;
-use crate::span::Span;
 use bug::Type;
 
 pub struct Parser<'a> {

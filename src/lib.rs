@@ -57,7 +57,7 @@ impl fmt::Display for Object {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Program {
     pub pool: Pool,
     pub fns: HashMap<String, DefinedFn>,
