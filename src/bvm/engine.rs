@@ -50,6 +50,7 @@ impl Engine {
                 Opcode::RETURN => self.return_(),
                 Opcode::LDC(idx) => self.ldc(idx),
                 Opcode::LLOAD(idx) => self.lload(idx),
+                Opcode::LSTORE(idx) => self.lstore(idx),
                 Opcode::INVOKE(name) => self.invoke(name),
                 Opcode::IPUSH(integer) => self.ipush(integer),
                 Opcode::ICMPGT => self.icmpgt(),
@@ -148,6 +149,11 @@ impl Engine {
     fn lload(&mut self, idx: usize) {
         let o = self.frame.load(idx).unwrap().clone();
         self.frame.push(o);
+    }
+
+    fn lstore(&mut self, idx: usize) {
+        let o = self.frame.pop().unwrap();
+        self.frame.locals.set_at(idx, o);
     }
 
     fn icmpgt(&mut self) {

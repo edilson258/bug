@@ -1,6 +1,6 @@
-use super::ast::*;
 use super::highlighter::highlight_error;
 use super::span::Span;
+use super::{ast::*, span};
 use bug::stdlib::NativeFn;
 use bug::{FunctionPrototype, Type};
 use std::collections::HashMap;
@@ -32,7 +32,9 @@ impl<'a> Checker<'a> {
 
     fn check_statement(&mut self, statement: &mut Statement) -> Result<(), String> {
         match statement {
-            Statement::Function(f) => Ok(self.check_statement_function(f)?),
+            Statement::Function(function) => Ok(self.check_statement_function(function)?),
+            Statement::Variable(variable) => Ok(self.check_statement_vardecl(variable)?),
+            Statement::Assignment(assignment) => Ok(self.check_statement_assignment(assignment)?),
             Statement::Expression(expression) => Ok(self.check_statement_expression(expression)?),
         }
     }
@@ -46,12 +48,11 @@ impl<'a> Checker<'a> {
         let prototype = FunctionPrototype::new(param_types.len(), f.return_type.clone(), param_types);
         self.ctx.declare(name.clone(), Symbol::Function(prototype));
         self.ctx.enter_scope(ScopeType::Function);
-        for parameter in &f.parameters.parameters {
-            if let Some(_) = self.ctx.lookup_locally(&parameter.identifier.label) {
-                return Err(self.error_name_already_used(&parameter.identifier.label, &parameter.identifier.span));
+        for param in &f.parameters.parameters {
+            if let Some(_) = self.ctx.lookup_locally(&param.identifier.label) {
+                return Err(self.error_name_already_used(&param.identifier.label, &param.identifier.span));
             }
-            self.ctx
-                .declare(parameter.identifier.label.clone(), Symbol::Variable(Variable { typ: parameter.typ.clone() }))
+            self.ctx.declare(param.identifier.label.clone(), Symbol::Variable(Variable::new(param.typ.clone())))
         }
         for statement in &mut f.body.statements {
             self.check_statement(statement)?;
@@ -62,6 +63,40 @@ impl<'a> Checker<'a> {
             self.diagnostics.diagnostics.push(err);
         }
         self.ctx.leave_scope();
+        Ok(())
+    }
+
+    fn check_statement_vardecl(&mut self, v: &mut VariableDeclaration) -> Result<(), String> {
+        let name = v.identifier.label.clone();
+        if let Some(_) = self.ctx.lookup_locally(&name) {
+            return Err(self.error_name_already_used(&name, &v.identifier.span));
+        }
+        self.ctx.declare(name, Symbol::Variable(Variable::new(v.typ.clone())));
+        self.ctx.scopes[self.ctx.scope_pointer].assignments.push(v.identifier.label.clone());
+        Ok(())
+    }
+
+    fn check_statement_assignment(&mut self, assignment: &mut StatementAssignment) -> Result<(), String> {
+        let target_name = match self.ctx.scopes[self.ctx.scope_pointer].assignments.last() {
+            Some(name) => name.clone(),
+            None => return Err("".to_string()),
+        };
+
+        let (val_typ, val_span) = match self.ctx.pop() {
+            Some((typ, span)) => (typ, span),
+            None => return Err("".to_owned()),
+        };
+
+        if let Symbol::Variable(v) = self.ctx.lookup_locally(&target_name).unwrap() {
+            let expected_val_typ = v.typ.clone();
+            if expected_val_typ != val_typ {
+                return Err(self.error_assign_wrong_type(&target_name, &expected_val_typ, &val_typ, &val_span));
+            }
+        } else {
+            unimplemented!()
+        }
+
+        assignment.var_name = Some(target_name);
         Ok(())
     }
 
@@ -184,8 +219,15 @@ enum Symbol {
     Variable(Variable),
 }
 
+#[derive(Clone)]
 struct Variable {
     typ: Type,
+}
+
+impl Variable {
+    fn new(typ: Type) -> Self {
+        Self { typ }
+    }
 }
 
 enum ScopeType {
@@ -197,15 +239,16 @@ struct Scope {
     _typ: ScopeType,
     table: HashMap<String, Symbol>,
     stack: Vec<(Type, Span)>,
+    assignments: Vec<String>,
 }
 
 impl Scope {
     fn new(typ: ScopeType) -> Self {
-        Self { _typ: typ, table: HashMap::new(), stack: vec![] }
+        Self { _typ: typ, table: HashMap::new(), stack: vec![], assignments: vec![] }
     }
 
     fn from(typ: ScopeType, table: HashMap<String, Symbol>) -> Self {
-        Self { _typ: typ, table, stack: vec![] }
+        Self { _typ: typ, table, stack: vec![], assignments: vec![] }
     }
 }
 
@@ -298,6 +341,16 @@ impl<'a> Checker<'a> {
 
     fn error_return_type(&mut self, name: &str, span: &Span, expected: &Type, provided: &Type) -> String {
         self.error(&format!("Function `{}` returns `{}` but got `{}` ", name, expected, provided), span)
+    }
+
+    fn error_assign_wrong_type(&mut self, var_name: &str, expected: &Type, provided: &Type, span: &Span) -> String {
+        self.error(
+            &format!(
+                "Variable `{}` expects value of type `{}` but value of type `{}` was provided",
+                var_name, expected, provided
+            ),
+            span,
+        )
     }
 
     fn error_name_not_declared(&mut self, name: &str, span: &Span) -> String {

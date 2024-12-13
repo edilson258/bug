@@ -43,6 +43,7 @@ impl<'a> Lexer<'a> {
             '>' => Ok(self.read_simple_token(TokenKind::RightAngle)),
             '?' => Ok(self.read_simple_token(TokenKind::QuestionMark)),
             ':' => Ok(self.read_simple_token(TokenKind::Colon)),
+            '=' => Ok(self.read_simple_token(TokenKind::Equal)),
             '"' => self.read_string(),
             '0'..='9' => self.read_number(),
             'a'..='z' | 'A'..='Z' | '_' => Ok(self.read_keyword_or_identifier()),

@@ -1,16 +1,12 @@
 mod bugc;
 mod bvm;
+mod cli;
 mod utils;
 
-use std::io::Write;
-
 use bug::stdlib::list_natives;
-use bugc::compile;
-use bugc::utils::get_file_stem;
-use bvm::engine::Engine;
-use bvm::load_program_binary;
-
-mod cli;
+use bugc::{compile, utils::get_file_stem};
+use bvm::{engine::Engine, load_program_binary};
+use std::io::Write;
 
 fn main() {
     let matches = cli::command_line();

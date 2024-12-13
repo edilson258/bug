@@ -24,6 +24,7 @@ pub enum TokenKind {
     TypeVoid,
     TypeStr,
 
+    Equal,
     Minus,
     Plus,
     RightAngle,

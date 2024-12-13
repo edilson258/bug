@@ -42,8 +42,10 @@ impl CodeGenerator {
 
     fn emit_statement(&mut self, statement: Statement) {
         match statement {
-            Statement::Function(f) => self.emit_statement_function(f),
-            Statement::Expression(e) => self.emit_statement_expression(e),
+            Statement::Function(function) => self.emit_statement_function(function),
+            Statement::Variable(variable) => self.emit_statement_vardecl(variable),
+            Statement::Assignment(assignment) => self.emit_statement_assign(assignment),
+            Statement::Expression(expression) => self.emit_statement_expression(expression),
         };
     }
 
@@ -61,6 +63,14 @@ impl CodeGenerator {
         let max_locals = self.context.locals.len();
         let code = self.context.code.clone();
         self.program.fns.insert(name, DefinedFn::new(0, arity, code, max_locals));
+    }
+
+    fn emit_statement_vardecl(&mut self, v: VariableDeclaration) {
+        self.context.locals.insert(v.identifier.label, self.context.locals.len());
+    }
+
+    fn emit_statement_assign(&mut self, a: StatementAssignment) {
+        self.context.push(Opcode::LSTORE(self.context.locals.get(&a.var_name.unwrap()).unwrap().to_owned()));
     }
 
     fn emit_statement_expression(&mut self, expression: StatementExpression) {

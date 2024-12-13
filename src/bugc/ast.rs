@@ -1,3 +1,5 @@
+use std::io::Seek;
+
 use super::span::Span;
 use bug::Type;
 
@@ -6,7 +8,34 @@ pub type Ast = Vec<Statement>;
 #[derive(Debug)]
 pub enum Statement {
     Function(StatementFunction),
+    Variable(VariableDeclaration),
     Expression(StatementExpression),
+    Assignment(StatementAssignment),
+}
+
+#[derive(Debug)]
+pub struct StatementAssignment {
+    pub span: Span,
+    pub var_name: Option<String>,
+}
+
+impl StatementAssignment {
+    pub fn new(span: Span) -> Self {
+        Self { span, var_name: None }
+    }
+}
+
+#[derive(Debug)]
+pub struct VariableDeclaration {
+    pub typ: Type,
+    pub identifier: Identifier,
+    pub span: Span,
+}
+
+impl VariableDeclaration {
+    pub fn new(typ: Type, identifier: Identifier, span: Span) -> Self {
+        Self { typ, identifier, span }
+    }
 }
 
 #[derive(Debug)]

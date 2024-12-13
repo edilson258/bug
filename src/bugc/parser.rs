@@ -47,6 +47,10 @@ impl<'a> Parser<'a> {
     fn parse_statement(&mut self) -> Result<Statement, ParserError> {
         match self.current_token.kind {
             TokenKind::Function => Ok(Statement::Function(self.parse_statement_function()?)),
+            TokenKind::TypeInt | TokenKind::TypeStr | TokenKind::TypeVoid => {
+                Ok(Statement::Variable(self.parse_statement_vardecl()?))
+            }
+            TokenKind::Equal => Ok(Statement::Assignment(self.parse_statement_assign())),
             _ => Ok(Statement::Expression(self.parse_statement_expression()?)),
         }
     }
@@ -57,7 +61,8 @@ impl<'a> Parser<'a> {
         let mut signature_span = self.current_token.span.clone();
         let parameters = self.parse_function_params()?;
         signature_span.end = self.current_token.span.end;
-        let return_type = self.parse_type_annotation()?;
+        let return_type =
+            if TokenKind::Arrow == self.current_token.kind { Type::Void } else { self.parse_type_annotation()? };
         let body = self.parse_statement_block()?;
         Ok(StatementFunction::new(identifier, parameters, return_type, body, signature_span))
     }
@@ -93,6 +98,20 @@ impl<'a> Parser<'a> {
         parameters.span.end = self.current_token.span.end;
         self.bump_expect(TokenKind::RightParent, "Expecting `)` after function's parameters")?;
         Ok(parameters)
+    }
+
+    fn parse_statement_vardecl(&mut self) -> Result<VariableDeclaration, ParserError> {
+        let mut span = self.current_token.span.clone();
+        let var_type = self.parse_type_annotation()?;
+        span.end = self.current_token.span.end;
+        let var_name = self.parse_identifier()?;
+        Ok(VariableDeclaration::new(var_type, var_name, span))
+    }
+
+    fn parse_statement_assign(&mut self) -> StatementAssignment {
+        let span = self.current_token.span.clone();
+        self.bump();
+        StatementAssignment::new(span)
     }
 
     fn parse_type_annotation(&mut self) -> Result<Type, ParserError> {
